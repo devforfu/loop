@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import List
+from pathlib import Path
 from multiprocessing import cpu_count
 
 import torch
@@ -8,40 +9,44 @@ from torch.utils.data import DataLoader
 from torch.nn import functional as F
 from torch.optim import Optimizer
 
-from .callbacks import CallbackGroup, default_callbacks
+from .callbacks import CallbackGroup
 from .config import defaults
 from .optimizer import get_optimizer
-from .stepper import BaseStepper
+from .stepper import BaseStepper, SimpleStepper
+from .utils import default_callbacks
+from .metrics import accuracy
 
 
 class Loop:
 
     def __init__(self,
                  model: nn.Module,
-                 device: torch.device = None,
-                 opt: Optimizer = 'adamw',
-                 opt_config: dict = None,
-                 move_to_device: bool=True,
-                 alpha: float = 0.98):
+                 opt: Optimizer='AdamW',
+                 opt_config: dict=None,
+                 device: torch.device=None,
+                 alpha: float=0.98):
 
+        device = device or defaults.device
+        model.to(device)
         opt = get_optimizer(opt, model, opt_config)
 
         self.model = model
-        self.device = device or defaults.device
+        self.device = device
         self.opt = opt
-        self.move_to_device = move_to_device
         self.alpha = alpha
         self.callbacks = None
         self.stop = False
         self.loss = None
         self.ended = False
+        self.metrics = None
 
     def run(self,
             phases: List['Phase'],
             stepper: BaseStepper,
             callbacks=None,
             epochs: int=1,
-            loss_fn=None):
+            loss_fn=None,
+            metrics=None):
 
         cb = CallbackGroup(callbacks)
         cb.set_loop(self)
@@ -50,6 +55,7 @@ class Loop:
 
         self.callbacks = cb
         self.loss = loss_fn or F.nll_loss
+        self.metrics = metrics
 
         for epoch in range(epochs):
             if self.stop:
@@ -83,13 +89,13 @@ class Loop:
             phase.rolling_metrics[name] = avg_value
         phase.metrics = updated
 
+    def save_model(self, path):
+        torch.save(self.model.state_dict(), path)
+
     def _place_and_unwrap_if_needed(self, batch):
         x, *y = batch
-        if self.move_to_device:
-            x = x.to(self.device)
-            y = [tensor.to(self.device) for tensor in y]
-        else:
-            x, *y = batch
+        x = x.to(self.device)
+        y = [tensor.to(self.device) for tensor in y]
         if len(y) == 1:
             [y] = y
         return x, y
@@ -123,14 +129,23 @@ class Phase:
 
 
 def train(model, train_data, valid_data, epochs=1, batch_size=1,
-          loss_fn=None, num_workers=None, device=None):
+          optimizer='Adam', loss_fn=None, metrics=None, num_workers=None,
+          device=None, callbacks=None, path=None):
 
     num_workers = num_workers or cpu_count()
+    callbacks = callbacks or default_callbacks(path)
+    device = device or defaults.device
+    metrics = metrics or [accuracy]
+
     train_dl = DataLoader(train_data, batch_size, shuffle=True,
                           num_workers=num_workers)
     valid_dl = DataLoader(valid_data, batch_size, num_workers=num_workers)
-    phases = [Phase('train', train_dl), Phase('valid', valid_dl, grad=False)]
-    loop = Loop(model, device)
-    stepper = BaseStepper()
-    loop.run(phases, stepper, default_callbacks, epochs, loss_fn)
+
+    phases = [Phase('train', train_dl),
+              Phase('valid', valid_dl, grad=False)]
+
+    loop = Loop(model, opt=optimizer, device=device)
+    stepper = SimpleStepper()
+    loop.run(phases, stepper, callbacks, epochs, loss_fn, metrics)
+
     return loop

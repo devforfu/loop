@@ -2,9 +2,15 @@ import torch
 
 
 class BaseStepper:
+    """
+    A thin wrapper that is intended to encapsulate a single training step.
 
-    def __init__(self, metrics=None):
-        self.metrics = metrics
+    The instance of the class accept (x, y) pair and returns metrics collected
+    after gradients update. The basic implementation doesn't include any
+    additional properties and delegates attributes referencing to the
+    underlying Loop class.
+    """
+    def __init__(self):
         self.loop = None
 
     def set_loop(self, loop):
@@ -21,8 +27,7 @@ class BaseStepper:
 
 class SimpleStepper(BaseStepper):
     """
-    A thin wrapper encapsulating the model, its optimizer, a scheduler, and a
-    loss function into single object.
+
 
     The stepper instance is invoked during each training iteration and returns
     the loss on batch.
@@ -58,7 +63,6 @@ class SimpleStepper(BaseStepper):
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
-                self.schedule.step()
 
         return metrics
 

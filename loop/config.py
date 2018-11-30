@@ -11,11 +11,14 @@ def env_var(var_name, default=None):
         raise RuntimeError(
             f'The environment variable {var_name} is not defined but required '
             f'to setup the package')
-    return os.environ[var_name]
+    return os.environ.get(var_name, default)
 
 
-dot_file = Path(env_var('LOOP_DOT_FILE', '~/.loop/config.json').expanduser())
-params = json.load(dot_file.open().read())
+dot_file = Path(env_var('LOOP_DOT_FILE', '~/.loop/config.json')).expanduser()
+if dot_file.exists():
+    params = json.load(dot_file.open().read())
+else:
+    params = {}
 
 device = params.get(
     'device',
@@ -24,4 +27,4 @@ device = params.get(
 
 defaults = dict(device=device)
 defaults.update(**params)
-defaults = namedtuple('Defaults', sorted(list(defaults.keys)))(**defaults)
+defaults = namedtuple('Defaults', sorted(list(defaults)))(**defaults)
