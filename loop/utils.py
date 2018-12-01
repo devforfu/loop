@@ -4,7 +4,7 @@ from .callbacks import History, Logger, CSVLogger, Checkpoint
 from .schedule import Scheduler, CosineAnnealingSchedule
 
 
-def default_callbacks(workdir=None):
+def wdefault_callbacks(workdir=None):
     """Returns a list with commonly used callbacks."""
 
     workdir = Path(workdir) if workdir else Path.cwd()

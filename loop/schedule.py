@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import math
 
+from torchvision.models import resnet34
+
 from .callbacks import Callback
 
 
@@ -16,18 +18,24 @@ class Scheduler(Callback):
         self.parameters = parameters or self.default_parameters
         self.mode = mode
         self.updater = None
+        self.history = []
 
     def training_start(self):
         self.updater = ParameterUpdater(
             self.schedule, self.parameters, self.loop.opt)
+        self.history.append(self.updater.current_values())
 
     def epoch_end(self, epoch, metrics):
         if self.mode == 'epoch':
-            self.updater.step()
+            self.update_parameters()
 
     def batch_end(self, epoch, phase):
         if self.mode == 'batch':
-            self.updater.step()
+            self.update_parameters()
+
+    def update_parameters(self):
+        self.history.append(self.updater.current_values())
+        self.updater.step()
 
 
 class ParameterUpdater:
@@ -40,11 +48,17 @@ class ParameterUpdater:
     def set_optimizer(self, opt):
         self.opt = opt
 
+    def current_values(self):
+        return [
+            {conf['name']: group[conf['name']]
+             for conf in self.params}
+            for group in self.opt.param_groups]
+
     def step(self):
         mult = self.sched.update()
         for group in self.opt.param_groups:
             for item in self.params:
-                name = item.get('name')
+                name = item['name']
                 conf = item.get('conf')
                 if name in group:
                     inverse = conf.get('inverse', False)
