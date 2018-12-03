@@ -17,23 +17,3 @@ def merge_dicts(ds):
 def to_snake_case(string):
     s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
-
-
-
-# from pathlib import Path
-#
-# from .callbacks import History, Logger, CSVLogger, Checkpoint
-# from .schedule import Scheduler, CosineAnnealingSchedule
-#
-#
-# def wdefault_callbacks(workdir=None):
-#     """Returns a list with commonly used callbacks."""
-#
-#     workdir = Path(workdir) if workdir else Path.cwd()
-#     return [
-#         History(),
-#         Logger(),
-#         CSVLogger(filename=workdir/'history.csv'),
-#         Checkpoint(folder=workdir),
-#         Scheduler(CosineAnnealingSchedule(), mode='batch')
-#     ]
