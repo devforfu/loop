@@ -45,7 +45,7 @@ class LinearGroup(nn.Module):
         if dropout is not None and dropout > 0.0:
             layers.append(nn.Dropout(dropout))
         layers.append(get_activation_layer(activ))
-        self.main = nn.Sequential(layers)
+        self.main = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.main(x)

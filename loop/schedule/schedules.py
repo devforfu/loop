@@ -29,7 +29,9 @@ class CosineAnnealingSchedule:
 
 class OneCycleSchedule:
 
-    def __init__(self, t, linear_pct=0.2, eta_max=1.0, eta_min=None, div_factor=100):
+    def __init__(self, t, linear_pct=0.2, eta_max=1.0, eta_min=None,
+                 div_factor=100, decay_to_zero=True):
+
         if eta_min is None:
             eta_min = eta_max / div_factor
 
@@ -41,7 +43,10 @@ class OneCycleSchedule:
         self.t_cosine = int(math.ceil(t * (1 - linear_pct))) + 1
         self.t_linear = int(math.floor(t * linear_pct))
 
-        self.cosine = CosineAnnealingSchedule(eta_min, eta_max, t_max=self.t_cosine, t_mult=1)
+        self.cosine = CosineAnnealingSchedule(
+            eta_min=0 if decay_to_zero else eta_min,
+            eta_max=eta_max,
+            t_max=self.t_cosine, t_mult=1)
         self.linear = lambda x: x * (eta_max - eta_min) / self.t_linear + eta_min
 
         self.iter = 0

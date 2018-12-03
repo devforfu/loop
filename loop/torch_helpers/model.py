@@ -1,3 +1,5 @@
+import sys
+
 import torch
 from torch import nn
 
@@ -32,6 +34,25 @@ def get_output_shape(model):
     return list(out.size())[1:]
 
 
+def training_status(layer):
+    params = list(layer.parameters())
+    if not params:
+        return 'no params'
+    trainable = [p for p in params if p.requires_grad]
+    return 'frozen' if not trainable else ''
+
+
+def freeze_status(m, stream=sys.stdout):
+    """Flattens the model and prints its require_grad value."""
+    stream.write('Layers status\n')
+    stream.write('-' * 80 + '\n')
+    for layer in flat_model(m):
+        name = layer.__class__.__name__
+        status = training_status(layer)
+        stream.write(f'{name:<68} [{status:9s}]\n')
+    stream.flush()
+
+
 def classifier_weights(m: nn.Module, bn=(1, 1e-3)):
     """Initializes layers weights for a classification model."""
     name = classname(m)
@@ -47,7 +68,7 @@ def classifier_weights(m: nn.Module, bn=(1, 1e-3)):
             nn.init.constant_(m.weight, weight)
             nn.init.constant_(m.bias, bias)
 
-        elif name.find('Linear') != -1:
+        elif name == 'Linear':
             nn.init.kaiming_normal_(m.weight)
             nn.init.zeros_(m.bias)
 

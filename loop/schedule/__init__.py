@@ -1,2 +1,2 @@
 from .updater import ParameterUpdater
-from .schedules import CosineAnnealingSchedule
+from .schedules import CosineAnnealingSchedule, OneCycleSchedule

@@ -8,7 +8,7 @@ import PIL.Image
 from torch.utils.data import Dataset
 from torchvision.datasets.folder import pil_loader, is_image_file
 
-from .image_renderer import RAW_SIZE, default_renderer
+from image_renderer import RAW_SIZE, default_renderer
 
 
 class Doodles(Dataset):

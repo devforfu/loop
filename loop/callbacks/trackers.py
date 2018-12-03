@@ -1,3 +1,7 @@
+from pathlib import Path
+import psutil
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -41,3 +45,64 @@ class RollingLoss(Callback):
     def epoch_ended(self, phases, **kwargs):
         for phase in phases:
             phase.update_metric('loss', phase.last_loss)
+
+
+class MemoryUsage(Callback):
+
+    MB = 1024 ** 2
+    GB = 1024 ** 3
+
+    def __init__(self, filename='memory.csv'):
+        self.filename = filename
+        self._stream = None
+        self.iter = None
+
+    def training_started(self, **kwargs):
+        self.iter = 0
+        if self._stream is not None:
+            self.close()
+        self._stream = Path(self.filename).open('w')
+        self._stream.write(
+            'index,mem_percent,mem_free,mem_available,mem_used\n')
+
+    def training_ended(self, **kwargs):
+        self.close()
+
+    def batch_ended(self, **kwargs):
+        self.iter += 1
+        mem = psutil.virtual_memory()
+        record = [self.iter, mem.percent, mem.free, mem.available, mem.used]
+        string = ','.join([str(x) for x in record])
+        self._stream.write(string + '\n')
+        self._stream.flush()
+
+    def close(self):
+        self._stream.flush()
+        self._stream.close()
+        self._stream = None
+
+    def plot(self, unit=None, **fig_kwargs):
+        unit = unit or self.GB
+        mem = pd.read_csv(self.filename)
+        index = mem.columns.str.startswith('mem')
+        mem[mem.columns[index]] /= unit
+        f, ax = plt.subplots(2, 1, **fig_kwargs)
+        ax1, ax2 = ax.flat
+        unit_name = ('GB' if unit == self.GB else
+                     'MB' if unit == self.MB else
+                     '')
+        self.plot_memory_percentage(ax1, mem)
+        self.plot_memory_usage(ax2, mem, unit_name)
+
+    @staticmethod
+    def plot_memory_percentage(ax, mem):
+        mem.plot(x='index', y='mem_percent', ax=ax)
+        ax.set_title('Memory usage during training', fontsize=20)
+        ax.set_xlabel('Batch Index', fontsize=16)
+        ax.set_ylabel('Percentage', fontsize=16)
+
+    @staticmethod
+    def plot_memory_usage(ax, mem, y_label):
+        mem.plot(x='index', y=['mem_available', 'mem_used'], ax=ax)
+        ax.set_xlabel('Batch Index', fontsize=16)
+        ax.set_ylabel(y_label, fontsize=16)
