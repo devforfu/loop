@@ -64,6 +64,7 @@ class Classifier(nn.Module):
                 ni, no = params['ni'], params['no']
                 drop, bn = params.get('drop', 0.25), params.get('bn', True)
                 yield LinearGroup(ni, no, drop, bn, 'leaky_relu')
+            yield nn.Linear(conf[-1]['no'], n_classes)
 
 
         model = arch(True)
