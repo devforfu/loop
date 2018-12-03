@@ -11,6 +11,8 @@ def train_classifier(model, opt, phases, callbacks, epochs):
 
 
 def train(model, opt, phases, callbacks, epochs, device, loss_fn):
+    model.to(device)
+
     cb = callbacks
 
     cb.training_started(phases=phases, optimizer=opt)

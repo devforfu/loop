@@ -1,7 +1,7 @@
-from collections import namedtuple
 import json
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import torch
 
@@ -27,4 +27,5 @@ device = params.get(
 
 defaults = dict(device=device)
 defaults.update(**params)
-defaults = namedtuple('Defaults', sorted(list(defaults)))(**defaults)
+defaults = SimpleNamespace(**defaults)
+
