@@ -24,5 +24,5 @@ class Scheduler(Callback):
             self.update_parameters()
 
     def update_parameters(self):
-        self.history.append(self.updater.current_values())
         self.updater.step()
+        self.history.append(self.updater.current_values())

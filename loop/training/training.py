@@ -55,11 +55,16 @@ def train(model, opt, phases, callbacks, epochs, device, loss_fn):
     cb.training_ended(phases=phases)
 
 
-def make_phases(train_ds, valid_ds, batch_size=4):
+def make_phases(train_ds, valid_ds, batch_size=4, num_workers=0):
+    if isinstance(num_workers, tuple):
+        trn, val = num_workers
+    else:
+        trn = val = num_workers
     return [
-        Phase('train', DataLoader(train_ds, batch_size, shuffle=True)),
-        Phase('valid', DataLoader(valid_ds, int(batch_size*1.5)), grad=False)
-    ]
+        Phase('train', DataLoader(
+            train_ds, batch_size, shuffle=True, num_workers=trn)),
+        Phase('valid', DataLoader(
+            valid_ds, batch_size, num_workers=val), grad=False)]
 
 
 def place_and_unwrap(batch, dev):

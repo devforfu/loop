@@ -59,23 +59,24 @@ class Classifier(nn.Module):
 
         super().__init__()
 
-        def create_top(conf):
-            for params in conf:
-                ni, no = params['ni'], params['no']
-                drop, bn = params.get('drop', 0.25), params.get('bn', True)
-                yield LinearGroup(ni, no, drop, bn, 'leaky_relu')
-            yield nn.Linear(conf[-1]['no'], n_classes)
-
-
         model = arch(True)
         seq_model = as_sequential(model)
         backbone, classifier = seq_model[:-2], seq_model[-2:]
         out_shape = get_output_shape(backbone)
         input_size = out_shape[0] * 2
 
+
+        def create_top(conf):
+            for params in conf:
+                ni, no = params.get('ni', input_size), params['no']
+                drop, bn = params.get('drop', 0.25), params.get('bn', True)
+                yield LinearGroup(ni, no, drop, bn, 'leaky_relu')
+            yield nn.Linear(conf[-1]['no'], n_classes)
+
+
         if top is None:
             top = [
-                {'ni': input_size, 'no': 512, 'drop': 0.25},
+                {'no': 512, 'drop': 0.25},
                 {'ni': 512, 'no': 256, 'drop': 0.5}
             ]
 
@@ -89,7 +90,7 @@ class Classifier(nn.Module):
 
     def init(self, func):
         if func is not None:
-            self.apply(func)
+            self.top.apply(func)
 
     def freeze_backbone(self, freeze=True, bn=True):
         for child in self.backbone.children():

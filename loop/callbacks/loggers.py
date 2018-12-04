@@ -47,7 +47,6 @@ class ProgressBar(Callback):
     def epoch_ended(self, **kwargs):
         for bar in self.bars.values():
             bar.n = 0
-            bar.write('')
             bar.refresh()
 
     def training_ended(self, **kwargs):

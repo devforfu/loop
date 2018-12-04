@@ -13,12 +13,13 @@ from loop.schedule import CosineAnnealingSchedule
 from loop.config import defaults
 
 
-
 def test_training_model_with_loop(mnist):
     phases = make_phases(*mnist, batch_size=512)
     model = Net().to(defaults.device)
     opt = Adam(model.parameters(), lr=1e-2)
     cb = callbacks.CallbacksGroup([
+        callbacks.RollingLoss(),
+        callbacks.Accuracy(),
         callbacks.History(),
         callbacks.Scheduler(
             CosineAnnealingSchedule(
@@ -26,8 +27,6 @@ def test_training_model_with_loop(mnist):
                 t_max=len(phases[0].loader)),
             mode='batch'
         ),
-        callbacks.RollingLoss(),
-        callbacks.Accuracy(),
         callbacks.StreamLogger(),
         callbacks.ProgressBar()
     ])
