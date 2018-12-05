@@ -4,6 +4,7 @@ from torchvision import models
 
 from .model import as_sequential, classifier_weights, get_activation_layer
 from .model import classname, get_output_shape
+from ..utils import pairs
 
 
 class AdaptiveConcatPool2d(nn.Module):
@@ -54,8 +55,8 @@ class LinearGroup(nn.Module):
 class Classifier(nn.Module):
     """Builds a simple classifier based on pretrained architecture."""
 
-    def __init__(self, n_classes, top=None, arch=models.resnet34,
-                 init_fn=classifier_weights):
+    def __init__(self, n_classes, top=None, bn=True, dropout=0.5,
+                 arch=models.resnet34, init_fn=classifier_weights):
 
         super().__init__()
 
@@ -67,18 +68,17 @@ class Classifier(nn.Module):
 
 
         def create_top(conf):
-            for params in conf:
-                ni, no = params.get('ni', input_size), params['no']
-                drop, bn = params.get('drop', 0.25), params.get('bn', True)
+            ps = list(pairs(conf))
+            for i, (ni, no) in enumerate(ps):
+                drop = dropout if dropout else None
+                if i < len(ps) - 1:
+                    drop /= 2
                 yield LinearGroup(ni, no, drop, bn, 'leaky_relu')
-            yield nn.Linear(conf[-1]['no'], n_classes)
+            yield nn.Linear(conf[-1], n_classes)
 
 
-        if top is None:
-            top = [
-                {'no': 512, 'drop': 0.25},
-                {'ni': 512, 'no': 256, 'drop': 0.5}
-            ]
+        top = [512, 256] if not top else top
+        top = [input_size] + top
 
         self.backbone = backbone
         self.bottleneck = nn.Sequential(AdaptiveConcatPool2d(), Flatten())

@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from .base import Callback
 from ..schedule import ParameterUpdater
 
@@ -26,3 +28,16 @@ class Scheduler(Callback):
     def update_parameters(self):
         self.updater.step()
         self.history.append(self.updater.current_values())
+
+    def parameter_history(self, name, *names, group_index=0):
+        if not self.history:
+            return {}
+        curve = defaultdict(list)
+        names = [name] + list(names)
+        for record in self.history:
+            group = record[group_index]
+            for name in names:
+                if name not in group:
+                    raise ValueError(f'no history for parameter \'{name}\'')
+                curve[name].append(group[name])
+        return dict(curve)

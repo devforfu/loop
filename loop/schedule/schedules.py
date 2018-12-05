@@ -57,3 +57,8 @@ class OneCycleSchedule:
             return self.linear(self.iter)
         else:
             return self.cosine.update()
+
+    @staticmethod
+    def from_epochs(loader, epochs):
+        return OneCycleSchedule(t=len(loader) * epochs)
+

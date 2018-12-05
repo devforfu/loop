@@ -2,8 +2,44 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn.functional import cross_entropy
 
+import loop.callbacks as C
 from .base import Phase
 from ..config import defaults
+from ..schedule import OneCycleSchedule
+
+
+class ClassifierTrainer:
+
+    def __init__(self, model, opt, phases):
+        self.model = model
+        self.opt = opt
+        self.phases = phases
+        self.callbacks = []
+
+    def __call__(self, *args, **kwargs):
+        self.train(*args, **kwargs)
+
+    def train(self, epochs=1, callbacks=None, pbar=True):
+        if callbacks is None:
+            sched = OneCycleSchedule.from_epochs(self.phases[0].loader, epochs)
+            callbacks = [
+                C.RollingLoss(),
+                C.Accuracy(),
+                C.History(),
+                C.Scheduler(sched, mode='batch', params_conf=[
+                    {'name': 'lr'},
+                    {'name': 'weight_decay', 'inverse': True}
+                ]),
+                C.StreamLogger()
+            ]
+            if pbar:
+                callbacks.append(C.ProgressBar())
+        cb = C.CallbacksGroup(callbacks)
+        self.callbacks = cb
+        train_classifier(self.model, self.opt, self.phases, cb, epochs)
+
+    def __getitem__(self, item):
+        return self.callbacks[item]
 
 
 def train_classifier(model, opt, phases, callbacks, epochs):
