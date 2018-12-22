@@ -25,31 +25,56 @@ class AdaptiveConcatPool2d(nn.Module):
 class Flatten(nn.Module):
     """Converts N-dimensional tensor into 'flat' one."""
 
+    def __init__(self, keep_batch_dim=True):
+        super().__init__()
+        self.keep_batch_dim = keep_batch_dim
+
     def forward(self, x):
-        return x.view(x.size(0), -1)
+        if self.keep_batch_dim:
+            return x.view(x.size(0), -1)
+        return x.view(-1)
 
 
-class LinearGroup(nn.Module):
-    """The linear layer with 'batteries included'.
+# class LinearGroup(nn.Module):
+#     """The linear layer with 'batteries included'.
+#
+#     The layer creates not only the linear layer but:
+#         * (optionally) BatchNorm
+#         * (optionally) Dropout
+#         * Linear
+#         * Activation (ReLU, LeakyReLU, None, or custom)
+#
+#     """
+#     def __init__(self, ni, no, dropout=None, bn=True, activ='relu'):
+#         super().__init__()
+#         layers = [nn.BatchNorm1d(ni)] if bn else []
+#         layers.append(nn.Linear(ni, no))
+#         if dropout is not None and dropout > 0.0:
+#             layers.append(nn.Dropout(dropout))
+#         layers.append(get_activation_layer(activ))
+#         self.main = nn.Sequential(*layers)
+#
+#     def forward(self, x):
+#         return self.main(x)
 
-    The layer creates not only the linear layer but:
+
+def linear(ni, no, dropout=None, bn=True, activ='relu'):
+    """Convenience function that creates a linear layer instance with
+    'batteries included'.
+
+    The list of created layers:
         * (optionally) BatchNorm
         * (optionally) Dropout
         * Linear
         * Activation (ReLU, LeakyReLU, None, or custom)
 
     """
-    def __init__(self, ni, no, dropout=None, bn=True, activ='relu'):
-        super().__init__()
-        layers = [nn.BatchNorm1d(ni)] if bn else []
-        layers.append(nn.Linear(ni, no))
-        if dropout is not None and dropout > 0.0:
-            layers.append(nn.Dropout(dropout))
-        layers.append(get_activation_layer(activ))
-        self.main = nn.Sequential(*layers)
-
-    def forward(self, x):
-        return self.main(x)
+    layers = [nn.BatchNorm1d(ni)] if bn else []
+    layers.append(nn.Linear(ni, no))
+    if dropout is not None and dropout > 0.0:
+        layers.append(nn.Dropout(dropout))
+    layers.append(get_activation_layer(activ))
+    return layers
 
 
 class Classifier(nn.Module):
@@ -73,7 +98,7 @@ class Classifier(nn.Module):
                 drop = dropout if dropout else None
                 if i < len(ps) - 1:
                     drop /= 2
-                yield LinearGroup(ni, no, drop, bn, 'leaky_relu')
+                yield from linear(ni, no, drop, bn, 'leaky_relu')
             yield nn.Linear(conf[-1], n_classes)
 
 
