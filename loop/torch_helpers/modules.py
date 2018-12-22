@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 from torchvision import models
 
 from .utils import as_sequential, classifier_weights, get_activation_layer
@@ -35,29 +36,6 @@ class Flatten(nn.Module):
         return x.view(-1)
 
 
-# class LinearGroup(nn.Module):
-#     """The linear layer with 'batteries included'.
-#
-#     The layer creates not only the linear layer but:
-#         * (optionally) BatchNorm
-#         * (optionally) Dropout
-#         * Linear
-#         * Activation (ReLU, LeakyReLU, None, or custom)
-#
-#     """
-#     def __init__(self, ni, no, dropout=None, bn=True, activ='relu'):
-#         super().__init__()
-#         layers = [nn.BatchNorm1d(ni)] if bn else []
-#         layers.append(nn.Linear(ni, no))
-#         if dropout is not None and dropout > 0.0:
-#             layers.append(nn.Dropout(dropout))
-#         layers.append(get_activation_layer(activ))
-#         self.main = nn.Sequential(*layers)
-#
-#     def forward(self, x):
-#         return self.main(x)
-
-
 def linear(ni, no, dropout=None, bn=True, activ='relu'):
     """Convenience function that creates a linear layer instance with
     'batteries included'.
@@ -75,6 +53,29 @@ def linear(ni, no, dropout=None, bn=True, activ='relu'):
         layers.append(nn.Dropout(dropout))
     layers.append(get_activation_layer(activ))
     return layers
+
+
+class TinyNet(nn.Module):
+    """Simplistic convolution network classifier.
+
+    Something suitable for tests and MNIST training but probably nothing more.
+    """
+    def __init__(self, n_out=10):
+        super(TinyNet, self).__init__()
+        self.conv1 = nn.Conv2d(3, 10, kernel_size=5)
+        self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+        self.conv2_drop = nn.Dropout2d()
+        self.fc1 = nn.Linear(320, 50)
+        self.fc2 = nn.Linear(50, n_out)
+
+    def forward(self, x):
+        x = F.relu(F.max_pool2d(self.conv1(x), 2))
+        x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
+        x = x.view(-1, 320)
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=-1)
 
 
 class Classifier(nn.Module):
