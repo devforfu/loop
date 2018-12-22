@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from torchvision import models
 
-from .model import as_sequential, classifier_weights, get_activation_layer
-from .model import classname, get_output_shape
+from .utils import as_sequential, classifier_weights, get_activation_layer
+from .utils import classname, get_output_shape
 from ..utils import pairs
 
 

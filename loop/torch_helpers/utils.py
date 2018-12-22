@@ -1,10 +1,29 @@
+"""
+A set of tools to operate with torch modules.
+"""
 import sys
+from enum import Enum
 
 import torch
 from torch import nn
 
 
-def flat_model(model: nn.Module):
+class LayerState:
+    """Training status of torch layer."""
+
+    NoParams = 0
+    Trainable = 1
+    Frozen = 2
+
+    def __str__(self):
+        return {
+            0: 'no params',
+            1: 'trainable',
+            2: 'frozen'
+        }[self]
+
+
+def flat_model(model: nn.Module) -> list:
     """Converts PyTorch model from hierarchical representation into a single
     list of modules.
     """
@@ -17,13 +36,13 @@ def flat_model(model: nn.Module):
     return flatten(model)
 
 
-def as_sequential(model: nn.Module):
+def as_sequential(model: nn.Module) -> nn.Module:
     """Converts model with nested submodules into Sequential model."""
 
     return nn.Sequential(*list(model.children()))
 
 
-def get_output_shape(model):
+def get_output_shape(model: nn.Module) -> list:
     """Passes a dummy input tensor through the sequential model to get the
     shape of its output tensor (batch dimension is not included).
     """
@@ -34,16 +53,19 @@ def get_output_shape(model):
     return list(out.size())[1:]
 
 
-def training_status(layer):
+def training_status(layer: nn.Module) -> LayerState:
+    """Returns module's training status."""
+
     params = list(layer.parameters())
     if not params:
-        return 'no params'
-    trainable = [p for p in params if p.requires_grad]
-    return 'frozen' if not trainable else ''
+        return LayerState.NoParams
+    trainable = any([p for p in params if p.requires_grad])
+    return LayerState.Trainable if trainable else LayerState.Frozen
 
 
-def freeze_status(m, stream=sys.stdout):
+def freeze_status(m: nn.Module, stream=sys.stdout):
     """Flattens the model and prints its require_grad value."""
+
     stream.write('Layers status\n')
     stream.write('-' * 80 + '\n')
     for layer in flat_model(m):
@@ -53,8 +75,28 @@ def freeze_status(m, stream=sys.stdout):
     stream.flush()
 
 
+def unfreeze_layers(m: nn.Module):
+    """Unfreezes all trainable layers in the model."""
+
+    requires_grad(m, True)
+
+
+def freeze_layers(m: nn.Module):
+    """Freezes all trainable layers in the model."""
+
+    requires_grad(m, False)
+
+
+def requires_grad(m: nn.Module, grad: bool=True):
+    for layer in flat_model(m):
+        status = training_status(layer)
+        if status in (LayerState.Trainable, LayerState.Frozen):
+            layer.requires_grad = grad
+
+
 def classifier_weights(m: nn.Module, bn=(1, 1e-3)):
     """Initializes layers weights for a classification model."""
+
     name = classname(m)
 
     with torch.no_grad():
