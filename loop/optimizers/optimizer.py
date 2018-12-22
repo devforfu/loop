@@ -1,15 +1,11 @@
-import math
-
-import torch
 from torch import nn
 from torch import optim
 from torch.optim import Optimizer
 
+from .adamw import AdamW
+
 
 _registry = {}
-
-
-
 
 
 def get_optimizer(name_or_opt: str, model: nn.Module,
