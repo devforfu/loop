@@ -36,7 +36,7 @@ The features and improvements to be implemeted:
 
 ## If you need something mature and robust
 
-Please check the following project (especially, the last one) if you would like to have a more product-ready solution with less manual work and more levels of abstraction:
+Please check the following projects (especially, the last one) if you would like to have something that is more suitable for production usage with less manual work and debugging:
 
   1. [Ignite](https://pytorch.org/ignite/) — an official high-level interface for PyTorch
 
