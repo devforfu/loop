@@ -25,7 +25,7 @@ The project is at the very beginning of its development and lacks many desired f
 - [ ] Basic RNN support
 - [ ] Basic GAN support
 
-## Dependencies
+## 📚 Dependencies
 
 - psutil
 - numpy
