@@ -8,7 +8,7 @@ A simple implementation a Deep Learning models' training loop built on top of [`
 
 The [`pytorch`](https://pytorch.org) framework provides a very clean and straightforward interface to build (Deep) Machine Learning models and read the datasets from a persistent storage. So let's use the best features of this great tool and write a set of thin and transparent wrappers on top of it to build a general-purpose training/validation loop that will be able to accept [`Dataset`](https://pytorch.org/docs/stable/_modules/torch/utils/data/dataset.html#Dataset) and [`Module`](https://pytorch.org/docs/stable/_modules/torch/nn/modules/module.html#Module) instances, and run training process using modern Deep Learning training techniques.
 
-## Roadmap
+## 📋 Roadmap
 
 The features and improvements to be implemeted:
 
