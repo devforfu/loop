@@ -10,16 +10,16 @@ The [`pytorch`](https://pytorch.org) framework provides a very clean and straigh
 
 ## 📋 Roadmap
 
-The features and improvements to be implemeted:
+The project is at the very beginning of its development and lacks many desired features and tests. Therefore, there is a long list of improvements to be implemeted (from must-have to more optional):
 
 - [x] Basic implementation of training loop for CNN-based image classification models
 - [ ] Simplify training loop instantiation
-- [ ] Make possible to pass plain PyTorch classes and objects directly into the loop and utils
+- [ ] Make possible to pass plain PyTorch classes and objects directly into the training loop function
 - [ ] More callbacks (early stopping, model saver, [`visdom`](https://github.com/facebookresearch/visdom) integration, etc.)
-- [ ] CNN regression
 - [ ] Smoke tests and sanity checks to verify the correctness of training process 
+- [ ] CNN regression
 - [ ] Adding more examples and applications (Jupyter notebooks)
-- [ ] Continuous integration
+- [ ] Continuous integration is added to the repository
 - [ ] Benchmarking on "classical" image datasets
 - [ ] Basic set of image augmentations
 - [ ] Basic RNN support
