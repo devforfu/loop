@@ -7,8 +7,10 @@ from enum import Enum
 import torch
 from torch import nn
 
+from ..utils import classname
 
-class LayerState:
+
+class LayerState(Enum):
     """Training status of torch layer."""
 
     NoParams = 0
@@ -121,7 +123,3 @@ def get_activation_layer(activ, inplace=True):
     elif activ == 'leaky_relu':
         return nn.LeakyReLU(inplace=inplace)
     return activ
-
-
-def classname(x):
-    return x.__class__.__name__

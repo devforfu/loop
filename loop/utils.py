@@ -21,3 +21,7 @@ def to_snake_case(string):
 
 def pairs(seq):
     yield from zip(seq[:-1], seq[1:])
+
+
+def classname(x):
+    return x.__class__.__name__

@@ -1,3 +1,11 @@
+"""
+The AdamW optimizer implementation taken from PyTorch pull request:
+
+    https://github.com/pytorch/pytorch/pull/3740
+
+This module is going to disappear as soon as AdamW implementation is merged
+into the core PyTorch's codebase.
+"""
 import math
 
 import torch
@@ -22,8 +30,6 @@ class AdamW(Optimizer):
     .. Fixing Weight Decay Regularization in Adam:
     https://arxiv.org/abs/1711.05101
 
-    .. The implementation is taken from:
-    https://github.com/pytorch/pytorch/pull/3740
     """
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
                  weight_decay=0):
