@@ -1,10 +1,23 @@
 import math
 
 
+class LinearRange:
+    """A scheduler that linearly increase learning rate from min to max values."""
+
+    def __init__(self, t=100, min_lr=1e-7, max_lr=1):
+        step_size = (max_lr - min_lr)/(t - 1)
+        self.value = min_lr
+        self.step_size = step_size
+
+    def update(self, **kwargs):
+        value = self.value
+        self.value += self.step_size
+        return value
+
+
 class CosineAnnealingSchedule:
-    """
-    The schedule class that returns eta multiplier in range from 0.0 to 1.0.
-    """
+    """A schedule that returns eta multiplier in range from 0.0 to 1.0."""
+
     def __init__(self, eta_min=0.0, eta_max=1.0, t_max=100, t_mult=2):
         self.eta_min = eta_min
         self.eta_max = eta_max

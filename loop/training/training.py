@@ -4,15 +4,17 @@ from torch.nn.functional import cross_entropy
 
 from .base import Phase
 from ..config import defaults
-from ..callbacks import CallbacksGroup
+from ..callbacks import CallbacksGroup, Scheduler, RollingLoss
+from ..schedule import LinearRange, AbsoluteUpdater
 from ..shortcuts import create_classification_callbacks
 
 
-def train_classifier(model, opt, data, epochs=1, batch_size=4, num_workers=0, device=None):
+def train_classifier(model, opt, data, epochs=1, batch_size=4, callbacks=None, num_workers=0, device=None):
     device = device or defaults.device
     model.to(device)
     train_ds, valid_ds = data
-    callbacks = create_classification_callbacks(n_train_batches=len(train_ds))
+    if callbacks is None:
+        callbacks = create_classification_callbacks(n_train_batches=len(train_ds))
     phases = make_phases(train_ds, valid_ds, batch_size=batch_size, num_workers=num_workers)
     callbacks_group = CallbacksGroup(callbacks)
     train(model, opt, phases, callbacks_group, epochs, device, cross_entropy)
@@ -84,3 +86,23 @@ def place_and_unwrap(batch, dev):
     if len(y) == 1:
         [y] = y
     return x, y
+
+
+def find_lr(model, opt, train_ds, loss_fn, min_lr=1e-8, max_lr=10, batch_size=4):
+    """
+    Returns a curve that reflects the dependency between learning rate and
+    model loss.
+
+    Greatly inspired by fastai library and L. Smith papers.
+    """
+    loader = DataLoader(train_ds, batch_size=batch_size, num_workers=defaults.n_cpu)
+    phase = Phase('lr_finder', loader, grad=True)
+    model_state = model.cpu().state_dict()
+    sched = Scheduler(schedule=LinearRange(len(loader), min_lr, max_lr),
+                      updater_cls=AbsoluteUpdater, mode='batch')
+    group = CallbacksGroup([RollingLoss(), sched])
+    opt_state = opt.state_dict()
+    train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=loss_fn)
+    opt.load_state_dict(opt_state)
+    model.cpu().load_state_dict(model_state)
+    return group['rolling_loss']

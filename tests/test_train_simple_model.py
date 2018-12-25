@@ -1,13 +1,9 @@
-from pathlib import Path
-
-import pytest
 from torch.optim import Adam
-from torchvision.datasets import MNIST
-from torchvision.transforms import Compose, ToTensor, Normalize
+from torch.nn import functional as F
 
 from loop import train_classifier
+from loop.training import find_lr
 from loop.torch_helpers.modules import TinyNet
-from loop.torch_helpers.transforms import ExpandChannels
 
 
 def test_training_model_with_loop(mnist):
@@ -19,22 +15,10 @@ def test_training_model_with_loop(mnist):
     assert result['phases']['valid'].metrics['accuracy'][-1] > 0.95
 
 
-def get_transforms(norm_stats):
-    return Compose([
-        ToTensor(),
-        ExpandChannels(3),
-        Normalize(*norm_stats)
-    ])
+def test_finding_optimal_lr(mnist):
+    model = TinyNet()
+    opt = Adam(model.parameters())
 
+    losses = find_lr(model, opt, mnist[0], F.cross_entropy, batch_size=256)
 
-@pytest.fixture(scope='module')
-def mnist():
-    root = Path('~/data/mnist').expanduser()
-    stats = (0.1307,), (0.3081,)
-    train_ds = MNIST(
-        root, train=True, download=True,
-        transform=Compose([ToTensor(), ExpandChannels(3), Normalize(*stats)]))
-    valid_ds = MNIST(
-        root, train=False, download=True,
-        transform=Compose([ToTensor(), ExpandChannels(3), Normalize(*stats)]))
-    return train_ds, valid_ds
+    assert losses is not None

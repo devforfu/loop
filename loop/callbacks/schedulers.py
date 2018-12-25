@@ -7,14 +7,15 @@ from ..schedule import ParameterUpdater
 class Scheduler(Callback):
     default = [{'name': 'lr'}]
 
-    def __init__(self, schedule, mode='epoch', params_conf=None):
+    def __init__(self, schedule, mode='epoch', params_conf=None, updater_cls=ParameterUpdater):
         self.schedule = schedule
         self.params_conf = params_conf or self.default
         self.mode = mode
         self.history = []
+        self.updater_cls = updater_cls
 
     def training_started(self, optimizer, **kwargs):
-        self.updater = ParameterUpdater(self.schedule, self.params_conf, optimizer)
+        self.updater = self.updater_cls(self.schedule, self.params_conf, optimizer)
         self.updater.save_start_values()
 
     def batch_ended(self, phase, **kwargs):

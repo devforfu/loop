@@ -49,3 +49,4 @@ Please check the following projects (especially, the last one) if you would like
 ## Outro
 
 The repository started as an author's attempt to write some simple solution to train an image classifier with modern Deep Learning training techniques as described in [this post](https://towardsdatascience.com/deep-learning-model-training-loop-e41055a24b73). It is mostly about learning and implementing interesting algorithms, alongside with robustness and clean code.
+

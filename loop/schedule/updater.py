@@ -36,3 +36,15 @@ class ParameterUpdater:
                     inverse = item.get('inverse', False)
                     start_value = params.get(name)
                     group[name] = start_value * ((1 - mult) if inverse else mult)
+
+
+class AbsoluteUpdater(ParameterUpdater):
+    """Assigns an absolute value of parameter instead of multiplying the starting value by step."""
+
+    def step(self):
+        value = self.schedule.update()
+        for i, group in enumerate(self.opt.param_groups):
+            for item in self.params:
+                name = item['name']
+                if name in group:
+                    group[name] = value[name] if isinstance(value, dict) else value

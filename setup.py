@@ -4,6 +4,8 @@ exec(open('loop/version.py').read())
 
 requirements = [
     'psutil',
+    'tqdm',
+    'matplotlib',
     'numpy',
     'pandas',
     'torch',
