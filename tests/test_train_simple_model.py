@@ -5,35 +5,18 @@ from torch.optim import Adam
 from torchvision.datasets import MNIST
 from torchvision.transforms import Compose, ToTensor, Normalize
 
-from loop import train_classifier, make_phases
-from loop import callbacks
-from loop.schedule import CosineAnnealingSchedule
-from loop.config import defaults
+from loop import train_classifier
 from loop.torch_helpers.modules import TinyNet
 from loop.torch_helpers.transforms import ExpandChannels
 
 
 def test_training_model_with_loop(mnist):
-    phases = make_phases(*mnist, batch_size=512)
-    model = TinyNet().to(defaults.device)
+    model = TinyNet()
     opt = Adam(model.parameters(), lr=1e-2)
-    cb = callbacks.CallbacksGroup([
-        callbacks.RollingLoss(),
-        callbacks.Accuracy(),
-        callbacks.History(),
-        callbacks.Scheduler(
-            CosineAnnealingSchedule(
-                eta_min=0.01,
-                t_max=len(phases[0].loader)),
-            mode='batch'
-        ),
-        callbacks.StreamLogger(),
-        callbacks.ProgressBar()
-    ])
 
-    train_classifier(model, opt, phases, cb, epochs=3)
+    result = train_classifier(model, opt, data=mnist, epochs=3, batch_size=512, num_workers=0)
 
-    assert phases[1].metrics['accuracy'][-1] > 0.95
+    assert result['phases']['valid'].metrics['accuracy'][-1] > 0.95
 
 
 def get_transforms(norm_stats):

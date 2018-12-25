@@ -2,54 +2,28 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn.functional import cross_entropy
 
-import loop.callbacks as C
 from .base import Phase
 from ..config import defaults
-from ..schedule import OneCycleSchedule
+from ..callbacks import CallbacksGroup
+from ..shortcuts import create_classification_callbacks
 
 
-class ClassifierTrainer:
-
-    def __init__(self, model, opt, phases):
-        self.model = model
-        self.opt = opt
-        self.phases = phases
-        self.callbacks = []
-
-    def __call__(self, *args, **kwargs):
-        self.train(*args, **kwargs)
-
-    def train(self, epochs=1, callbacks=None, pbar=True):
-        if callbacks is None:
-            sched = OneCycleSchedule.from_epochs(self.phases[0].loader, epochs)
-            callbacks = [
-                C.RollingLoss(),
-                C.Accuracy(),
-                C.History(),
-                C.Scheduler(sched, mode='batch', params_conf=[
-                    {'name': 'lr'},
-                    {'name': 'weight_decay', 'inverse': True}
-                ]),
-                C.StreamLogger()
-            ]
-            if pbar:
-                callbacks.append(C.ProgressBar())
-        cb = C.CallbacksGroup(callbacks)
-        self.callbacks = cb
-        train_classifier(self.model, self.opt, self.phases, cb, epochs)
-
-    def __getitem__(self, item):
-        return self.callbacks[item]
+def train_classifier(model, opt, data, epochs=1, batch_size=4, num_workers=0, device=None):
+    device = device or defaults.device
+    model.to(device)
+    train_ds, valid_ds = data
+    callbacks = create_classification_callbacks(n_train_batches=len(train_ds))
+    phases = make_phases(train_ds, valid_ds, batch_size=batch_size, num_workers=num_workers)
+    callbacks_group = CallbacksGroup(callbacks)
+    train(model, opt, phases, callbacks_group, epochs, device, cross_entropy)
+    phases = {phase.name: phase for phase in phases}
+    return {'callbacks': callbacks_group, 'phases': phases, 'device': device}
 
 
-def train_classifier(model, opt, phases, callbacks, epochs):
-    train(model, opt, phases, callbacks, epochs, defaults.device, cross_entropy)
-
-
-def train(model, opt, phases, callbacks, epochs, device, loss_fn):
+def train(model, opt, phases, callbacks_group, epochs, device, loss_fn):
     model.to(device)
 
-    cb = callbacks
+    cb = callbacks_group
 
     cb.training_started(phases=phases, optimizer=opt)
 

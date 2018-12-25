@@ -4,7 +4,6 @@ Base classes to implement callbacks-based loop.
 The loop is only responsible for binding data loader and model together,
 while the rest of training tricks is implemented as callbacks.
 """
-from . import sort_callbacks
 from ..utils import to_snake_case, classname
 from ..mixins import ParametersMixin
 
@@ -60,10 +59,12 @@ class CallbacksGroup(Callback):
     def __init__(self, callbacks):
         self._init(callbacks)
 
-    def add_callback(self, obj):
-        self._init(self.callbacks + obj)
+    def add_callbacks(self, cb, *cbs):
+        callbacks = [cb] + list(cbs)
+        self._init(self.callbacks + callbacks)
 
     def _init(self, callbacks):
+        from . import sort_callbacks
         self.callbacks = sort_callbacks(callbacks)
         self.named_callbacks = {to_snake_case(classname(cb)): cb for cb in callbacks}
 
