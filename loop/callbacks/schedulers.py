@@ -41,4 +41,7 @@ class Scheduler(Callback):
                 if name not in group:
                     raise ValueError(f'no history for parameter \'{name}\'')
                 curve[name].append(group[name])
-        return dict(curve)
+        history = dict(curve)
+        if len(names) == 1:
+            return history[names[0]]
+        return history

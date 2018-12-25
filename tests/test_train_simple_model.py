@@ -1,5 +1,4 @@
 from torch.optim import Adam
-from torch.nn import functional as F
 
 from loop import train_classifier
 from loop.training import find_lr
@@ -19,6 +18,6 @@ def test_finding_optimal_lr(mnist):
     model = TinyNet()
     opt = Adam(model.parameters())
 
-    losses = find_lr(model, opt, mnist[0], F.cross_entropy, batch_size=256)
+    lr, loss = find_lr(model, opt, mnist[0], batch_size=256)
 
-    assert losses is not None
+    assert len(lr) == len(loss)

@@ -1,6 +1,8 @@
+import math
+
 import torch
 from torch.utils.data import DataLoader
-from torch.nn.functional import cross_entropy
+from torch.nn.functional import cross_entropy, nll_loss
 
 from .base import Phase
 from ..config import defaults
@@ -88,7 +90,7 @@ def place_and_unwrap(batch, dev):
     return x, y
 
 
-def find_lr(model, opt, train_ds, loss_fn, min_lr=1e-8, max_lr=10, batch_size=4):
+def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4):
     """
     Returns a curve that reflects the dependency between learning rate and
     model loss.
@@ -98,11 +100,14 @@ def find_lr(model, opt, train_ds, loss_fn, min_lr=1e-8, max_lr=10, batch_size=4)
     loader = DataLoader(train_ds, batch_size=batch_size, num_workers=defaults.n_cpu)
     phase = Phase('lr_finder', loader, grad=True)
     model_state = model.cpu().state_dict()
+    opt.param_groups[0]['lr'] = min_lr
     sched = Scheduler(schedule=LinearRange(len(loader), min_lr, max_lr),
                       updater_cls=AbsoluteUpdater, mode='batch')
     group = CallbacksGroup([RollingLoss(), sched])
     opt_state = opt.state_dict()
-    train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=loss_fn)
+    train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=nll_loss)
     opt.load_state_dict(opt_state)
     model.cpu().load_state_dict(model_state)
-    return group['rolling_loss']
+    log_loss = [math.log10(l) for l in phase.losses]
+    lr = sched.parameter_history('lr')
+    return lr, log_loss
