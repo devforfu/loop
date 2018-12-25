@@ -58,6 +58,12 @@ class Callback(ParametersMixin):
 class CallbacksGroup(Callback):
 
     def __init__(self, callbacks):
+        self._init(callbacks)
+
+    def add_callback(self, obj):
+        self._init(self.callbacks + obj)
+
+    def _init(self, callbacks):
         self.callbacks = sort_callbacks(callbacks)
         self.named_callbacks = {to_snake_case(classname(cb)): cb for cb in callbacks}
 

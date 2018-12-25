@@ -44,10 +44,6 @@ def sort_callbacks(callbacks: list) -> list:
     return [cb for _, cb in sorted(enumerated, key=lambda pair: pair[0])]
 
 
-def default_callbacks():
-    return [RollingLoss(), History(), StreamLogger()]
-
-
 def get_callback(name_or_cls, **params):
     """Returns a callback instance from its name or instantiates object if class provided."""
 

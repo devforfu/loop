@@ -6,9 +6,11 @@ from ..metrics import accuracy
 
 class Accuracy(Callback):
 
+    def training_started(self, **kwargs):
+        self._init()
+
     def epoch_started(self, **kwargs):
-        self.values = defaultdict(int)
-        self.counts = defaultdict(int)
+        self._init()
 
     def batch_ended(self, phase, output, target, **kwargs):
         acc = accuracy(output, target).detach().item()
@@ -19,3 +21,7 @@ class Accuracy(Callback):
         for phase in phases:
             metric = self.values[phase.name] / self.counts[phase.name]
             phase.update_metric('accuracy', metric)
+
+    def _init(self):
+        self.values = defaultdict(int)
+        self.counts = defaultdict(int)

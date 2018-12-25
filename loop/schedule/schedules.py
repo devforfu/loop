@@ -5,7 +5,6 @@ class CosineAnnealingSchedule:
     """
     The schedule class that returns eta multiplier in range from 0.0 to 1.0.
     """
-
     def __init__(self, eta_min=0.0, eta_max=1.0, t_max=100, t_mult=2):
         self.eta_min = eta_min
         self.eta_max = eta_max
