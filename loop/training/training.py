@@ -6,7 +6,7 @@ from torch.nn.functional import cross_entropy, nll_loss
 
 from .base import Phase
 from ..config import defaults
-from ..callbacks import CallbacksGroup, Scheduler, RollingLoss
+from ..callbacks import CallbacksGroup, Scheduler, RollingLoss, ProgressBar
 from ..schedule import LinearRange, AbsoluteUpdater
 from ..shortcuts import create_classification_callbacks
 
@@ -103,7 +103,7 @@ def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4, loss_fn=n
     opt.param_groups[0]['lr'] = min_lr
     sched = Scheduler(schedule=LinearRange(len(loader), min_lr, max_lr),
                       updater_cls=AbsoluteUpdater, mode='batch')
-    group = CallbacksGroup([RollingLoss(), sched])
+    group = CallbacksGroup([RollingLoss(), ProgressBar(), sched])
     opt_state = opt.state_dict()
     train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=loss_fn)
     opt.load_state_dict(opt_state)
