@@ -90,7 +90,8 @@ def place_and_unwrap(batch, dev):
     return x, y
 
 
-def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4, loss_fn=nll_loss):
+def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4,
+            loss_fn=nll_loss, log_loss=False):
     """
     Returns a curve that reflects the dependency between learning rate and
     model loss.
@@ -108,6 +109,8 @@ def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4, loss_fn=n
     train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=loss_fn)
     opt.load_state_dict(opt_state)
     model.cpu().load_state_dict(model_state)
-    log_loss = [math.log10(l) for l in phase.losses]
-    lr = sched.parameter_history('lr')
-    return lr, log_loss
+    losses = phase.losses
+    if log_loss:
+        losses = [math.log10(l) for l in losses]
+    lrs = sched.parameter_history('lr')
+    return lrs, losses
