@@ -56,32 +56,43 @@ def linear(ni, no, dropout=None, bn=True, activ='relu'):
 
 
 class TinyNet(nn.Module):
-    """Simplistic convolution network classifier.
+    """Simplistic convolution network.
 
-    Something suitable for tests and MNIST training but probably nothing more.
+    Something suitable for tests and simple datasets training but probably nothing more.
     """
-    def __init__(self, n_out=10):
-        super(TinyNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 10, kernel_size=5)
+    def __init__(self, n_channels=3, n_out=10, activation=None):
+        super().__init__()
+        self.conv1 = nn.Conv2d(n_channels, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(320, 50)
+        self.fc1 = nn.Linear(500, 50)
         self.fc2 = nn.Linear(50, n_out)
+        self.activation = activation
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        x = x.view(-1, 320)
+        x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
-        return F.log_softmax(x, dim=-1)
+        if self.activation is not None:
+            x = self.activation(x)
+        return x
 
 
-class Classifier(nn.Module):
-    """Builds a simple classifier based on pretrained architecture."""
+def tiny_classifier(n_channels, n_out):
+    """Creates tiny convnet with log softmax on top of it."""
 
-    def __init__(self, n_classes, top=None, bn=True, dropout=0.5,
+    activation = nn.LogSoftmax(dim=-1)
+    net = TinyNet(n_channels, n_out, activation=activation)
+    return net
+
+
+class FineTunedModel(nn.Module):
+    """Builds a fine-tuned network using pretrained backbone and custom head."""
+
+    def __init__(self, n_out, top=None, bn=True, dropout=0.5,
                  arch=models.resnet34, init_fn=classifier_weights):
 
         super().__init__()
@@ -100,7 +111,7 @@ class Classifier(nn.Module):
                 if i < len(ps) - 1:
                     drop /= 2
                 yield from linear(ni, no, drop, bn, 'leaky_relu')
-            yield nn.Linear(conf[-1], n_classes)
+            yield nn.Linear(conf[-1], n_out)
 
 
         top = [512, 256] if not top else top
@@ -110,6 +121,7 @@ class Classifier(nn.Module):
         self.bottleneck = nn.Sequential(AdaptiveConcatPool2d(), Flatten())
         self.top = nn.Sequential(*list(create_top(top)))
         self.init(init_fn)
+        self.freeze_backbone()
 
     def forward(self, x):
         return self.top(self.bottleneck(self.backbone(x)))

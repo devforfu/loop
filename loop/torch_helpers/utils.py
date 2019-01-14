@@ -18,11 +18,7 @@ class LayerState(Enum):
     Frozen = 2
 
     def __str__(self):
-        return {
-            0: 'no params',
-            1: 'trainable',
-            2: 'frozen'
-        }[self]
+        return {0: '-', 1: 'ok', 2: 'frozen'}[self.value]
 
 
 def flat_model(model: nn.Module) -> list:
@@ -61,7 +57,7 @@ def training_status(layer: nn.Module) -> LayerState:
     params = list(layer.parameters())
     if not params:
         return LayerState.NoParams
-    trainable = any([p for p in params if p.requires_grad])
+    trainable = sum([1 for p in params if p.requires_grad]) > 0
     return LayerState.Trainable if trainable else LayerState.Frozen
 
 
@@ -73,7 +69,7 @@ def freeze_status(m: nn.Module, stream=sys.stdout):
     for layer in flat_model(m):
         name = layer.__class__.__name__
         status = training_status(layer)
-        stream.write(f'{name:<68} [{status:9s}]\n')
+        stream.write(f'{name:<71} [{status:6s}]\n')
     stream.flush()
 
 

@@ -42,7 +42,7 @@ class CosineAnnealingSchedule:
 class OneCycleSchedule:
 
     def __init__(self, t, linear_pct=0.2, eta_max=1.0, eta_min=None,
-                 div_factor=100, decay_to_zero=True):
+                 div_factor=100, decay_to_zero=False):
 
         if eta_min is None:
             eta_min = eta_max / div_factor

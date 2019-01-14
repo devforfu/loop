@@ -7,7 +7,7 @@ from ..schedule import ParameterUpdater
 class Scheduler(Callback):
     default = [{'name': 'lr'}]
 
-    def __init__(self, schedule, mode='epoch', params_conf=None, updater_cls=ParameterUpdater):
+    def __init__(self, schedule, mode='batch', params_conf=None, updater_cls=ParameterUpdater):
         self.schedule = schedule
         self.params_conf = params_conf or self.default
         self.mode = mode

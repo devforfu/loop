@@ -8,23 +8,10 @@ from .base import Phase
 from ..config import defaults
 from ..callbacks import CallbacksGroup, Scheduler, RollingLoss
 from ..schedule import LinearRange, AbsoluteUpdater
-from ..shortcuts import create_classification_callbacks
+from ..shortcuts import create_callbacks
 
 
-def train_classifier(model, opt, data, epochs=1, batch_size=4, callbacks=None, num_workers=0, device=None):
-    device = device or defaults.device
-    model.to(device)
-    train_ds, valid_ds = data
-    if callbacks is None:
-        callbacks = create_classification_callbacks(n_train_batches=len(train_ds))
-    phases = make_phases(train_ds, valid_ds, batch_size=batch_size, num_workers=num_workers)
-    callbacks_group = CallbacksGroup(callbacks)
-    train(model, opt, phases, callbacks_group, epochs, device, cross_entropy)
-    phases = {phase.name: phase for phase in phases}
-    return {'callbacks': callbacks_group, 'phases': phases, 'device': device}
-
-
-def train(model, opt, phases, callbacks_group, epochs, device, loss_fn):
+def train(model, opt, phases, callbacks_group, epochs=1, device=defaults.device, loss_fn=nll_loss):
     model.to(device)
 
     cb = callbacks_group
@@ -90,10 +77,29 @@ def place_and_unwrap(batch, dev):
     return x, y
 
 
+def train_classifier(model, opt, data, epochs=1, batch_size=4, callbacks=None,
+                     num_workers=0, device=defaults.device, schedule_params=None):
+    """
+    Convenience wrapper on top of training loop.
+
+    Prepares training and validation phases, and (optionally) creates a set of callbacks helpful
+    for training a classification model.
+    """
+    train_ds, valid_ds = data
+    phases = make_phases(train_ds, valid_ds, batch_size=batch_size, num_workers=num_workers)
+    if callbacks is None:
+        schedule_params = schedule_params or {}
+        callbacks = create_callbacks(len(phases[0].loader), classification=True, **schedule_params)
+    callbacks_group = CallbacksGroup(callbacks)
+    train(model, opt, phases, callbacks_group, epochs, device, cross_entropy)
+    phases = {phase.name: phase for phase in phases}
+    return {'callbacks': callbacks_group, 'phases': phases, 'device': device}
+
+
+
 def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4):
     """
-    Returns a curve that reflects the dependency between learning rate and
-    model loss.
+    Returns a curve that reflects the dependency between learning rate and model loss.
 
     Greatly inspired by fastai library and L. Smith papers.
     """
