@@ -93,7 +93,8 @@ class FineTunedModel(nn.Module):
     """Builds a fine-tuned network using pretrained backbone and custom head."""
 
     def __init__(self, n_out, top=None, bn=True, dropout=0.5,
-                 arch=models.resnet34, init_fn=classifier_weights):
+                 arch=models.resnet34, init_fn=classifier_weights,
+                 activ=None):
 
         super().__init__()
 
@@ -111,8 +112,10 @@ class FineTunedModel(nn.Module):
                 if i < len(ps) - 1:
                     drop /= 2
                 yield from linear(ni, no, drop, bn, 'leaky_relu')
-            yield nn.Linear(conf[-1], n_out)
 
+            yield nn.Linear(conf[-1], n_out)
+            if activ is not None:
+                yield activ
 
         top = [512, 256] if not top else top
         top = [input_size] + top

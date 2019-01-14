@@ -6,7 +6,7 @@ from torch.nn.functional import cross_entropy, nll_loss
 
 from .base import Phase
 from ..config import defaults
-from ..callbacks import CallbacksGroup, Scheduler, RollingLoss
+from ..callbacks import CallbacksGroup, Scheduler, RollingLoss, ProgressBar
 from ..schedule import LinearRange, AbsoluteUpdater
 from ..shortcuts import create_callbacks
 
@@ -96,8 +96,8 @@ def train_classifier(model, opt, data, epochs=1, batch_size=4, callbacks=None,
     return {'callbacks': callbacks_group, 'phases': phases, 'device': device}
 
 
-
-def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4):
+def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4,
+            loss_fn=nll_loss, log_loss=False):
     """
     Returns a curve that reflects the dependency between learning rate and model loss.
 
@@ -109,11 +109,13 @@ def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4):
     opt.param_groups[0]['lr'] = min_lr
     sched = Scheduler(schedule=LinearRange(len(loader), min_lr, max_lr),
                       updater_cls=AbsoluteUpdater, mode='batch')
-    group = CallbacksGroup([RollingLoss(), sched])
+    group = CallbacksGroup([RollingLoss(), ProgressBar(), sched])
     opt_state = opt.state_dict()
-    train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=nll_loss)
+    train(model, opt, [phase], group, epochs=1, device=defaults.device, loss_fn=loss_fn)
     opt.load_state_dict(opt_state)
     model.cpu().load_state_dict(model_state)
-    log_loss = [math.log10(l) for l in phase.losses]
-    lr = sched.parameter_history('lr')
-    return lr, log_loss
+    losses = phase.losses
+    if log_loss:
+        losses = [math.log10(l) for l in losses]
+    lrs = sched.parameter_history('lr')
+    return lrs, losses
