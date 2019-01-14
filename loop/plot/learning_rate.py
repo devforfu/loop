@@ -10,6 +10,7 @@ def lr_loss_curve(lrs, losses, log_scale=True, zoom=None, ax=None, figsize=(10, 
     if ax is None:
         f, ax = plt.subplots(1, 1, figsize=figsize)
     if zoom is not None:
+        breakpoint()
         min_lr, max_lr = zoom
         lrs, losses = zip(*[(x, y) for x, y in zip(lrs, losses) if min_lr <= x <= max_lr])
     ax.plot(lrs, losses)
