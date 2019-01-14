@@ -13,6 +13,7 @@ The [`pytorch`](https://pytorch.org) framework provides a very clean and straigh
 The project is at the very beginning of its development and lacks many desired features and tests. Therefore, there is a long list of improvements to be implemeted (from must-have to more optional):
 
 - [x] Basic implementation of training loop for CNN-based image classification models
+- [ ] Add notebooks with benchmarks and examples
 - [ ] Simplify training loop instantiation
 - [ ] Make possible to pass plain PyTorch classes and objects directly into the training loop function
 - [ ] More callbacks (early stopping, model saver, [`visdom`](https://github.com/facebookresearch/visdom) integration, etc.)
