@@ -131,7 +131,8 @@ class FineTunedModel(nn.Module):
 
     def init(self, func):
         if func is not None:
-            self.top.apply(func)
+            with torch.no_grad:
+                self.top.apply(func)
 
     def freeze_backbone(self, freeze=True, bn=True):
         for child in self.backbone.children():

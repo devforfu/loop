@@ -96,13 +96,14 @@ def train_classifier(model, opt, data, epochs=1, batch_size=4, callbacks=None,
     return {'callbacks': callbacks_group, 'phases': phases, 'device': device}
 
 
-def find_lr(model, opt, train_ds, min_lr=1e-7, max_lr=1, batch_size=4,
-            loss_fn=nll_loss, log_loss=False):
+def find_lr(model, opt, train_ds, lr_range=(1e-6, 1e-2), batch_size=4, loss_fn=nll_loss,
+            log_loss=False):
     """
     Returns a curve that reflects the dependency between learning rate and model loss.
 
     Greatly inspired by fastai library and L. Smith papers.
     """
+    min_lr, max_lr = lr_range
     loader = DataLoader(train_ds, batch_size=batch_size, num_workers=defaults.n_cpu)
     phase = Phase('lr_finder', loader, grad=True)
     model_state = model.cpu().state_dict()
