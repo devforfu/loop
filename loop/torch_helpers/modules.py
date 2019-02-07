@@ -1,11 +1,56 @@
+import re
+
 import torch
 from torch import nn
+from torch.nn.modules import activation
 from torch.nn import functional as F
 from torchvision import models
 
 from .utils import as_sequential, classifier_weights, get_activation_layer
 from .utils import classname, get_output_shape
 from ..utils import pairs
+
+
+_public_names = [
+    (name, cls)
+    for name, cls in zip(dir(activation), activation)
+    if issubclass(cls, nn.Module) and not name.startswith('_')]
+
+_name_to_cls = {}
+_name_to_cls.update(dict(_public_names))
+_name_to_cls.update({name.lower(): cls for name, cls in _public_names})
+
+
+def get_activation(name):
+    """Convenience function that creates activation function from string.
+
+    A string can include an activation function name additional parameters in
+    one of the following formats:
+        * name
+        * name:value1;value2;...
+        * name:param1=value1;param2=value2;...
+
+    Examples:
+        activation('relu')
+        activation('relu
+        get_activation('relu:inplace=True')
+        get_activation('prelu:3')
+
+    """
+    args, kwargs = [], {}
+    if ':' in name:
+        name, params = name.split(':')
+        for param in params.split(';'):
+            if '=' in param:
+                key, value = param.split('=')
+                kwargs[key] = value
+            else:
+                args.append(param)
+    cls = _name_to_cls[name]
+    return cls(*args, **kwargs)
+
+
+act = get_activation
 
 
 class AdaptiveConcatPool2d(nn.Module):
