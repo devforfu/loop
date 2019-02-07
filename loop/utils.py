@@ -1,3 +1,5 @@
+import time
+from timeit import default_timer
 from collections import OrderedDict
 import re
 
