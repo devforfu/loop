@@ -129,9 +129,7 @@ class TinyNet(nn.Module):
 def tiny_classifier(n_channels, n_out):
     """Creates tiny convnet with log softmax on top of it."""
 
-    activation = nn.LogSoftmax(dim=-1)
-    net = TinyNet(n_channels, n_out, activation=activation)
-    return net
+    return TinyNet(n_channels, n_out, activation=nn.LogSoftmax(dim=-1))
 
 
 class FineTunedModel(nn.Module):
