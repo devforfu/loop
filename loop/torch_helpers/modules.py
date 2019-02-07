@@ -8,6 +8,7 @@ from torchvision import models
 
 from .utils import as_sequential, classifier_weights, get_activation_layer
 from .utils import classname, get_output_shape
+from ..annotations import MaybeActivation, ListOfModules
 from ..utils import pairs
 
 
@@ -21,14 +22,19 @@ _name_to_cls.update(dict(_public_names))
 _name_to_cls.update({name.lower(): cls for name, cls in _public_names})
 
 
-def get_activation(name):
+def get_activation(name: str) -> MaybeActivation:
     """Convenience function that creates activation function from string.
 
-    A string can include an activation function name additional parameters in
-    one of the following formats:
+    A string can include not only an activation function name but also positional and/or keyword
+    parameters accepted by function initialization. Therefore, the string could have one of the
+    following formats:
         * name
         * name:value1;value2;...
+        * name:value1;param2=value2;...
         * name:param1=value1;param2=value2;...
+
+    If not a string was provided but instance of torch.nn.Module, then the object is returned
+    as is.
 
     Examples:
         activation('relu')
@@ -37,6 +43,12 @@ def get_activation(name):
         get_activation('prelu:3')
 
     """
+    if isinstance(name, nn.Module):
+        return name
+
+    if name is None or name.lower() in ('linear', 'none'):
+        return None
+
     args, kwargs = [], {}
     if ':' in name:
         name, params = name.split(':')
@@ -81,9 +93,9 @@ class Flatten(nn.Module):
         return x.view(-1)
 
 
-def linear(ni, no, dropout=None, bn=True, activ='relu'):
-    """Convenience function that creates a linear layer instance with
-    'batteries included'.
+def linear(ni: int, no: int, dropout: float=None,
+           bn: bool=True, activ: str='relu') -> ListOfModules:
+    """Convenience function that creates a linear layer instance with the 'batteries included'.
 
     The list of created layers:
         * (optionally) BatchNorm
@@ -98,6 +110,56 @@ def linear(ni, no, dropout=None, bn=True, activ='relu'):
         layers.append(nn.Dropout(dropout))
     layers.append(get_activation_layer(activ))
     return layers
+
+
+def fc(ni: int, no: int, bias: bool=True, bn: bool=True, activ: str='linear',
+       dropout: float=None) -> ListOfModules:
+    """Convenience function that creates a linear layer instance with the 'batteries included'.
+
+    The list of created layers:
+        * Linear
+        * (optionally) BatchNorm
+        * (optionally) Dropout
+        * (optionally) Activation function
+
+    """
+    layers = [nn.Linear(ni, no, bias)]
+    if bn:
+        layers.append(nn.BatchNorm1d(no))
+    if activ is not None:
+        func = act(activ)
+        if func is not None:
+            layers.append(func)
+    if dropout is not None:
+        layers.append(nn.Dropout(dropout))
+    return layers
+
+
+def conv(ni: int, no: int, kernel: int, stride: int, groups: int=1, lrn: bool=False,
+         bn: bool=False, pad: int=0, pool: tuple=None, activ: str='prelu') -> ListOfModules:
+    """Convenience function that creates a 2D conv layers with the 'batteries included'.
+
+    The list of created layers:
+        * Convolution layer
+        * (optionally) Activation
+        * (optionally) Local response norm OR Batch norm
+        * (optionally) Pooling
+
+    """
+    bias = not (lrn or bn)
+    layers = [nn.Conv2d(ni, no, kernel, stride, pad, bias=bias, groups=groups)]
+    func = act(activ)
+    if func is not None:
+        layers += [func]
+    elif lrn:
+        layers.append(nn.LocalResponseNorm(2))
+    if pool is not None:
+        layers.append(nn.MaxPool2d(*pool))
+    return layers
+
+
+def bottleneck() -> ListOfModules:
+    return [AdaptiveConcatPool2d(1), Flatten()]
 
 
 class TinyNet(nn.Module):
