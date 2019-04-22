@@ -18,7 +18,9 @@ HEADER = '''
 def export(cell, min_size=7, types=('code',)):
     if cell['cell_type'] not in types:
         return False
-    src, *_ = cell['source']
+    if not cell['source']:
+        return False
+    src = cell['source'][0]
     if not src or len(src) < min_size:
         return False
     match = re.match(r'^\s*#\s*export\s*$', src, re.IGNORECASE)
