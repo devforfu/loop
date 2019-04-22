@@ -45,16 +45,17 @@ def find_notebooks(folder, ordered=True, pattern='*.ipynb'):
     return notebooks
 
 
-def export_notebooks(filenames, output):
+def export_notebooks(filenames, output, gap):
     count = 0
+    empty_lines = '\n'*gap
     for fn in filenames:
         fn = Path(fn)
         content = json.load(fn.open('r'))
         module = HEADER.format(edit_file=fn.name)
         for cell in (c for c in content['cells'] if export(c)):
-            module += f"{''.join(cell['source'][1:])}\n\n"
+            module += f"{''.join(cell['source'][1:])}{empty_lines}"
         module = re.sub(r'[ \t]+$', '', module, flags=re.MULTILINE)
-        pyfile = output/f'{fn.stem}.py'
+        pyfile = output/f"{''.join(fn.stem.partition('_')[2:])}.py"
         with pyfile.open('w') as file:
             file.write(module.strip() + '\n')
         print(f'Exported: {fn} -> {pyfile}')
@@ -66,6 +67,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-nb', default=None)
     parser.add_argument('-o', dest='out', default='exported')
+    parser.add_argument('-gap', type=int, default=3, help='number of empty lines between cells')
     args = vars(parser.parse_args())
     if args['nb'] is None:
         notebooks = find_notebooks(Path.cwd())
@@ -74,5 +76,5 @@ if __name__ == '__main__':
     output = Path(args['out'])
     if not output.exists():
         output.mkdir(parents=True)
-    n = export_notebooks(notebooks, output)
+    n = export_notebooks(notebooks, output, args['gap'])
     print(f'{n} notebook(s) exported into folder: {output}')
