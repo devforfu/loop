@@ -40,6 +40,7 @@ class BestMetric(Callback):
         return ignore
 
     def update_best(self, phase, **kwargs):
+        breakpoint()
         new_value = phase.get_last_value(self.metric)
         if self.best_value is None:
             self.best_value = new_value
@@ -70,7 +71,6 @@ class EarlyStopping(BestMetric):
         else:
             self.trials += 1
             if self.trials >= self.patience:
-                breakpoint()
                 self.running = False
 
     def epoch_ended(self, phases, epoch, **kwargs):

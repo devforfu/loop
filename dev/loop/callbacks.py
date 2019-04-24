@@ -11,6 +11,7 @@ import sys
 import numpy as np
 import pandas as pd
 
+from loop.mixins import ParametersMixin
 from loop.utils import merge_dicts, from_torch, autoformat, to_snake_case, classname, to_list
 
 
@@ -36,7 +37,7 @@ class Order(IntFlag):
         return [item for _, item in ordered]
 
 
-class Callback:
+class Callback(ParametersMixin):
     """The base class inherited by callbacks.
 
     Provides a lot of hooks invoked on various stages of the training loop execution. The
@@ -116,7 +117,7 @@ class Average(Callback):
 
     def __init__(self, metric_fn: 'callable', alias: str=None):
         self.metric_fn = metric_fn
-        self.name = alias or self.metric_fn.__name__
+        self.alias = alias or self.metric_fn.__name__
 
     def epoch_started(self, **kwargs):
         self.values = defaultdict(int)
@@ -130,7 +131,7 @@ class Average(Callback):
     def epoch_ended(self, phases, **kwargs):
         for phase in phases:
             metric = self.values[phase.name] / self.counts[phase.name]
-            phase.update_metric(self.name, metric)
+            phase.update_metric(self.alias, metric)
 
 
 class StreamLogger(Callback):
@@ -171,6 +172,10 @@ class Group(Callback):
     def __init__(self, cbs, model=None):
         self._init(cbs)
         self.model = model
+
+    def __repr__(self):
+        names = '\n'.join([f'  {repr(cb)}' for cb in self.callbacks])
+        return 'Group([\n' + names + '\n])'
 
     def _init(self, cbs):
         if not cbs:
