@@ -8,7 +8,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-from loop.callbacks import Callback
+from loop.callbacks import Callback, Order
 from loop.utils import calculate_layout
 
 
@@ -72,6 +72,8 @@ OneCycle = lambda **params: Function(one_cycle, **params)
 class Scheduler(Callback):
     """Updates optimizer's learning rates using provided scheduling function."""
 
+    order = Order.Schedule()
+
     def __init__(self, opt, schedule: 'callable', params: list=None, mode: str='batch'):
         assert mode in {'batch', 'epoch'}
         params = _make_sched_params(params)
@@ -80,14 +82,14 @@ class Scheduler(Callback):
         self.params = params
         self.n_steps = 0
 
-    def training_started(self, **params):
+    def training_started(self, **kwargs):
         self.history = defaultdict(list)
 
-    def epoch_started(self, epoch, **params):
+    def epoch_started(self, epoch, **kwargs):
         if self.mode == 'epoch':
             self.step(epoch)
 
-    def batch_started(self, phase, **params):
+    def batch_started(self, phase, **kwargs):
         if self.mode == 'batch':
             if phase.grad:
                 self.step(phase.batch_index)
@@ -121,7 +123,8 @@ class Scheduler(Callback):
             f, axes = plt.subplots(*calculate_layout(n))
         for i, param in enumerate(params):
             df.plot(x='iteration', y=param, ax=axes.flat[i])
-        return f
+        f.tight_layout()
+        return axes
 
 
 def _make_sched_params(params):

@@ -23,7 +23,7 @@ class Order(IntFlag):
     Loss = 10
     Metric = 100
     Schedule = 200
-    History = 300
+    Tracker = 300
     Logging = 1000
 
     def __call__(self, index=0):
@@ -84,7 +84,7 @@ class RollingLoss(Callback):
 class History(Callback):
     """A callback that collects model's metrics during its training."""
 
-    order = Order.History()
+    order = Order.Tracker()
 
     def training_started(self, **kwargs):
         self.recorded = None
@@ -114,9 +114,9 @@ class Average(Callback):
     """
     order = Order.Metric()
 
-    def __init__(self, metric_fn: 'callable', name: str=None):
+    def __init__(self, metric_fn: 'callable', alias: str=None):
         self.metric_fn = metric_fn
-        self.name = name or self.metric_fn.__name__
+        self.name = alias or self.metric_fn.__name__
 
     def epoch_started(self, **kwargs):
         self.values = defaultdict(int)
@@ -151,9 +151,14 @@ class StreamLogger(Callback):
         metrics = merge_dicts([p.last_metrics for p in phases])
         values = [f'{k}={autoformat(v)}' for k, v in metrics.items()]
         values_string = ', '.join(values)
-        string = f'Epoch: {epoch:4d} | {values_string}\n'
+        self.write(f'Epoch: {epoch:4d} | {values_string}\n')
+
+    def interrupted(self, exc, **kwargs):
+        self.write(exc)
+
+    def write(self, msg):
         for stream in self.streams:
-            stream.write(string)
+            stream.write(msg)
             stream.flush()
 
 
@@ -163,9 +168,9 @@ class Group(Callback):
     Each observer has a backward reference to its group via 'group' attribute. The group
     keeps a reference to the model which can be used by the
     """
-    def __init__(self, cbs):
+    def __init__(self, cbs, model=None):
         self._init(cbs)
-        self._model = None
+        self.model = model
 
     def _init(self, cbs):
         if not cbs:
@@ -181,9 +186,6 @@ class Group(Callback):
     def add(self, cb, *cbs):
         cbs = [cb] + list(cbs)
         self._init(cbs)
-
-    def set_model(self, model):
-        self._model = model
 
     def training_started(self, **kwargs): self('training_started', **kwargs)
     def training_ended(self, **kwargs): self('training_ended', **kwargs)

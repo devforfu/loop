@@ -38,7 +38,7 @@ class Loop:
         model.to(device)
         opt = opt_fn(model, **(opt_params or {}))
         cb = create_callbacks(cbs, default_cb)
-        cb.set_model(model)
+        cb.model = model
 
         self.model = model
         self.opt = opt
@@ -58,7 +58,7 @@ class Loop:
                 self.train_one_epoch(phases, epoch)
             self.cb.training_ended(phases=phases)
         except TrainingInterrupted as e:
-            self.cb.interrupted(reason=e)
+            self.cb.interrupted(exc=e)
 
     def train_one_epoch(self, phases: list, curr_epoch: int=1):
         cb, model, opt = self.cb, self.model, self.opt
@@ -99,6 +99,8 @@ class Loop:
 class TrainingInterrupted(Exception):
     def __init__(self, context=None):
         self.context = context
+    def __str__(self):
+        return str(self.context)
 
 
 def place_and_unwrap(batch, device):

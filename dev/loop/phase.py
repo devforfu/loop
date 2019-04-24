@@ -78,6 +78,9 @@ class Phase:
             metrics[f'{self.name}_{name}'] = values
         return metrics
 
+    def get_last_value(self, metric):
+        return self.last_metrics[f'{self.name}_{metric}']
+
     def update(self, loss: float):
         self.losses.append(loss)
 
