@@ -119,6 +119,18 @@ class Flatten(nn.Module):
         return x.view(-1)
 
 
+class SeparableConv(nn.Module):
+    """Simple implementation of N-d separable convolution."""
+
+    def __init__(self, ni, no, kernel=3, stride=1, pad=0, conv=nn.Conv1d):
+        super().__init__()
+        self.depthwise = conv(ni, ni, kernel, stride, padding=pad, groups=ni)
+        self.pointwise = conv(ni, no, kernel_size=1)
+
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
+
 def fc(ni: int, no: int, bias: bool=True, bn: bool=True, activ: str='linear',
        dropout: float=None) -> ListOfModules:
     """Convenience function that creates a linear layer instance with the 'batteries included'.
@@ -145,7 +157,7 @@ def fc(ni: int, no: int, bias: bool=True, bn: bool=True, activ: str='linear',
 def conv2d(ni: int, no: int, kernel: int, stride: int, groups: int=1,
            lrn: bool=False, bn: bool=False, pad: int=0, pool: tuple=None,
            activ: str='prelu') -> ListOfModules:
-    """Convenience function that creates a 2D conv layers with the 'batteries included'.
+    """Convenience function that creates a 2D conv layer with the 'batteries included'.
 
     The list of created layers:
         * Convolution layer
@@ -163,6 +175,19 @@ def conv2d(ni: int, no: int, kernel: int, stride: int, groups: int=1,
         layers.append(nn.LocalResponseNorm(2))
     if pool is not None:
         layers.append(nn.MaxPool2d(*pool))
+    return layers
+
+
+def sepconv(ni: int, no: int, kernel: int, stride: int,
+            pad: int, drop: float=None, activ: str='relu',
+            conv: nn.Module=nn.Conv1d) -> ListOfModules:
+    """Convenience function that creates conv layer with the 'batteries included'."""
+
+    assert drop is None or (0.0 < drop < 1.0)
+    layers = [_SeparableConv(ni, no, kernel, stride, pad, conv=conv)]
+    layers.append(act(activ))
+    if drop is not None:
+        layers.append(nn.Dropout(drop))
     return layers
 
 

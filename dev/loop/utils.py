@@ -4,6 +4,7 @@
 # file to edit: 00c_utils.ipynb
 
 from collections import OrderedDict
+import math
 import re
 
 import numpy as np
@@ -81,3 +82,26 @@ def from_torch(tensor):
     if not obj.shape:
         return obj.item()
     return obj.numpy()
+
+
+def make_axis_if_needed(ax=None, **params):
+    """Creates matplotlib axis but only if 'ax' is None."""
+    if ax is None:
+        _, ax = plt.subplots(1, 1, **params)
+    return ax
+
+
+def calculate_layout(num_axes, n_rows=None, n_cols=None):
+    """Calculates number of rows/columns required to fit `num_axes` plots
+    onto figure if specific number of columns/rows is specified.
+    """
+    if n_rows is not None and n_cols is not None:
+        raise ValueError(
+            'cannot derive number of rows/columns if both values provided')
+    if n_rows is None and n_cols is None:
+        n_cols = 2
+    if n_rows is None:
+        n_rows = max(1, math.ceil(num_axes / n_cols))
+    else:
+        n_cols = max(1, math.ceil(num_axes / n_rows))
+    return n_rows, n_cols
