@@ -8,6 +8,7 @@ from torch.nn import functional as F
 from torch.nn.modules import activation as torch_act
 
 from loop.annotations import MaybeActivation, ListOfModules
+from loop.utils import pairs
 
 
 __all__ = ['get_activation', 'fc', 'conv2d', 'bottleneck', 'Flatten',
@@ -194,3 +195,19 @@ def sepconv(ni: int, no: int, kernel: int, stride: int,
 def bottleneck() -> ListOfModules:
     """A 'bridge' from convolutional blocks to fully-connected layers."""
     return [AdaptiveConcatPool2d(1), Flatten()]
+
+
+def fc_network(input_size: int, layers: list, activ: str='relu'):
+    """Creates simple fully-connected network.
+
+    The `layers` list defines sizes of hidden layers and the output layers. Between
+    hidden layers activations are inserted. The topmost layer doesn't include any
+    non-linear activation.
+    """
+    in_sz = input_size
+    model = []
+    for out_sz in layers[:-1]:
+        model += [nn.Linear(in_sz, out_sz), act(activ)]
+        in_sz = out_sz
+    model.append(nn.Linear(in_sz, layers[-1]))
+    return nn.Sequential(*model)
