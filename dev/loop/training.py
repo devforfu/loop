@@ -3,6 +3,8 @@
 # -----------------------------------------
 # file to edit: 02c_training.ipynb
 
+import sys
+
 import torch
 from torch import nn
 from torch import optim
@@ -27,6 +29,12 @@ def create_callbacks(cbs, default: bool=True):
     cbs = list(cbs or [])
     cbs += defaults
     return C.Group(cbs)
+
+
+_err_stream = sys.stderr
+def report_error(exc):
+    _err_stream.write(str(exc))
+    _err_stream.flush()
 
 
 class Loop:
@@ -57,8 +65,16 @@ class Loop:
             for epoch in range(1, epochs + 1):
                 self.train_one_epoch(phases, epoch)
             self.cb.training_ended(phases=phases)
+
         except TrainingInterrupted as e:
+            self.cb.training_ended(phases=phases)
             self.cb.interrupted(exc=e)
+
+        except Exception as e:
+            report_error(e)
+
+        finally:
+            self.cb.cleanup()
 
     def train_one_epoch(self, phases: list, curr_epoch: int=1):
         cb, model, opt = self.cb, self.model, self.opt
@@ -101,6 +117,10 @@ class TrainingInterrupted(Exception):
         self.context = context
     def __str__(self):
         return str(self.context)
+
+
+def raise_interruption(context):
+    raise TrainingInterrupted(context=context)
 
 
 def place_and_unwrap(batch, device):

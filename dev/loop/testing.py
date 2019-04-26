@@ -22,7 +22,7 @@ def get_mnist(flat=False):
     mnist_stats = ([mean]*1, [std]*1)
 
     if flat:
-        def flatten(t): return t.reshape(-1, 784)
+        def flatten(t): return t.flatten()
         def normalize(t): return (t - mean)/std
         tfs = T.Compose([T.ToTensor(), flatten, normalize])
         trn_ds = MNIST(root, train=True, transform=tfs)
@@ -44,7 +44,7 @@ def get_mnist(flat=False):
     return trn_ds, val_ds
 
 
-def train_classifier_with_callbacks(model, cbs, n, bs=1024):
+def train_classifier_with_callbacks(model, cbs, n, flat=False, bs=1024):
     loop = Loop(model, cbs=cbs, loss_fn=F.cross_entropy)
-    loop.fit_datasets(*get_mnist(), epochs=n, batch_size=bs)
+    loop.fit_datasets(*get_mnist(flat), epochs=n, batch_size=bs)
     return loop

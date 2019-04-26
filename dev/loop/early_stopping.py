@@ -9,6 +9,7 @@ import torch
 
 from loop.callbacks import Callback, Order
 from loop.utils import autoformat
+from loop.training import raise_interruption
 
 
 class BestMetric(Callback):
@@ -30,24 +31,17 @@ class BestMetric(Callback):
     def training_started(self, **kwargs):
         self.best_value = None
 
-    def epoch_started(self, **kwargs):
-        self.updated = False
-
-    def phase_ended(self, phase, **kwargs):
-        ignore = phase.name != self.phase
-        if not ignore:
-            self.update_best(phase, **kwargs)
-        return ignore
-
-    def update_best(self, phase, **kwargs):
-        breakpoint()
-        new_value = phase.get_last_value(self.metric)
+    def epoch_ended(self, phases, epoch, **kwargs):
+        new_value = phases[self.phase].get_last_value(self.metric)
         if self.best_value is None:
-            self.best_value = new_value
+            best_value = new_value
         else:
-            self.best_value = self.better(self.best_value, new_value)
-        self.updated = self.best_value == new_value
-        return self.updated
+            best_value = self.better(self.best_value, new_value)
+        self.best_value = best_value
+        self.improved(epoch, best_value == new_value)
+
+    def improved(self, epoch: int, was_improved: bool):
+        """A method invoked at the end of each epoch reporting if the metric was improved."""
 
 
 class EarlyStopping(BestMetric):
@@ -61,35 +55,29 @@ class EarlyStopping(BestMetric):
     def training_started(self, **kwargs):
         super().training_started(**kwargs)
         self.trials = 0
-        self.running = True
 
-    def phase_ended(self, phase, **kwargs):
-        ignore = super().phase_ended(phase=phase, **kwargs)
-        if ignore: return
-        if self.updated:
+    def improved(self, epoch: int, was_improved: bool):
+        if was_improved:
             self.trials = 0
+            return
         else:
             self.trials += 1
             if self.trials >= self.patience:
-                self.running = False
-
-    def epoch_ended(self, phases, epoch, **kwargs):
-        super().epoch_ended(phases=phases, epoch=epoch, **kwargs)
-        if self.running: return
-        from loop.training import TrainingInterrupted
-        msg = f'Early stopping at epoch {epoch} with {self.formatted_best}'
-        raise TrainingInterrupted(msg)
+                msg = f'Early stopping at epoch {epoch} with {self.formatted_best}\n'
+                raise_interruption(msg)
 
 
 class ModelSaver(BestMetric):
 
     order = Order.Tracker(2)
 
-    def __init__(self, mode: str='every', root: Path=Path.cwd(), **kwargs):
+    def __init__(self, mode: str='every', root: Path=Path.cwd(),
+                 prefix: str='model', **kwargs):
         super().__init__(**kwargs)
         assert mode in {'every', 'best'}
-        self.root = Path(root)
         self.mode = mode
+        self.root = Path(root)
+        self.prefix = prefix
 
     def training_started(self, **kwargs):
         super().training_started(**kwargs)
@@ -97,12 +85,12 @@ class ModelSaver(BestMetric):
             self.root.mkdir(parents=True)
         self.last_saved = None
 
-    def epoch_ended(self, phases, epoch, **kwargs):
-        super().epoch_ended(phases=phases, epoch=epoch, **kwargs)
-        fname = f'model__{self.formatted_best}__epoch={epoch}.pth'
-        if self.mode == 'every' or self.updated:
+    def improved(self, epoch: int, was_improved: bool):
+        breakpoint()
+        if self.mode == 'every' or was_improved:
+            fname = f'{self.prefix}__{self.formatted_best}__epoch={epoch}.pth'
             path = self.root/fname
-            torch.save(self.group.model, path)
+            torch.save(self.group.model.state_dict(), path)
             self.last_saved = path
 
     def load_last_saved_state(self, model=None):

@@ -38,6 +38,7 @@ def to_snake_case(string):
 
 
 def pairs(seq):
+    """Returns list of adjacent pairs: [1, 2, 3] -> [(1, 2), (2, 3)]."""
     yield from zip(seq[:-1], seq[1:])
 
 

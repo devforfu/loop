@@ -197,7 +197,7 @@ def bottleneck() -> ListOfModules:
     return [AdaptiveConcatPool2d(1), Flatten()]
 
 
-def fc_network(input_size: int, layers: list, activ: str='relu'):
+def fc_network(input_size: int, layers: list, activ: str='relu') -> nn.Sequential:
     """Creates simple fully-connected network.
 
     The `layers` list defines sizes of hidden layers and the output layers. Between

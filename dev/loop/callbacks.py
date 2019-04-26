@@ -57,6 +57,7 @@ class Callback(ParametersMixin):
     def before_backward(self, **kwargs): pass
     def after_backward(self, **kwargs): pass
     def interrupted(self, **kwargs): pass
+    def cleanup(self, **kwargs): pass
 
 
 class RollingLoss(Callback):
@@ -155,7 +156,7 @@ class StreamLogger(Callback):
         self.write(f'Epoch: {epoch:4d} | {values_string}\n')
 
     def interrupted(self, exc, **kwargs):
-        self.write(exc)
+        self.write(str(exc))
 
     def write(self, msg):
         for stream in self.streams:
@@ -205,6 +206,7 @@ class Group(Callback):
     def before_backward(self, **kwargs): self('before_forward', **kwargs)
     def after_backward(self, **kwargs): self('after_backward', **kwargs)
     def interrupted(self, **kwargs): self('interrupted', **kwargs)
+    def cleanup(self, **kwargs): self('cleanup', **kwargs)
 
     def __getattr__(self, item):
         if item in vars(self):
