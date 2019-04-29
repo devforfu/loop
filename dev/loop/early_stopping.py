@@ -86,7 +86,6 @@ class ModelSaver(BestMetric):
         self.last_saved = None
 
     def improved(self, epoch: int, was_improved: bool):
-        breakpoint()
         if self.mode == 'every' or was_improved:
             fname = f'{self.prefix}__{self.formatted_best}__epoch={epoch}.pth'
             path = self.root/fname
