@@ -3,7 +3,12 @@
 # -----------------------------------------
 # file to edit: 02a_metrics.ipynb
 
+import torch
+
+
 def accuracy(out: 'tensor', y_true: 'tensor'):
+    out = torch.as_tensor(out).float()
+    y_true = torch.as_tensor(y_true).long()
     y_hat = out.argmax(dim=-1).view(y_true.size(0), -1)
     y_true = y_true.view(y_true.size(0), -1)
     match = y_hat == y_true
