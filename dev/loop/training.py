@@ -33,11 +33,22 @@ def create_callbacks(cbs, default: bool=True):
 
 _err_stream = sys.stderr
 def report_error(exc):
-    _err_stream.write(str(exc))
+    import traceback
+    tb = traceback.format_tb(exc.__traceback__)
+    _err_stream.write('Error! Training loop was interupted with un-expected exception\n')
+    _err_stream.write('--------------------------------------------------------------\n')
+    _err_stream.write('\n'.join(tb))
+    _err_stream.write('\n' + str(exc) + '\n')
+    _err_stream.write('--------------------------------------------------------------\n')
     _err_stream.flush()
 
 
 class Loop:
+    """A generic training loop implementation.
+
+    The class wraps model, phases, optimizer and callbacks, and provides a couple of
+    methods to make the training process launching a bit more convenient.
+    """
     def __init__(self, model: nn.Module, cbs: list=None,
                  default_cb: bool=True, opt_fn: 'callable'=default_optimizer,
                  opt_params: dict=None, device: 'device'=defaults.device,
@@ -55,11 +66,13 @@ class Loop:
         self.device = device
 
     def fit_datasets(self, trn_ds, val_ds, epochs: int=1, batch_size: int=defaults.bs):
+        """Uses two torch datasets (training and validation) to fit the model."""
         phases = Phase.make_train_valid(
             trn_ds, val_ds, bs=batch_size, num_workers=defaults.n_jobs)
         self.train(phases, epochs)
 
     def train(self, phases: list, epochs: int=1):
+        """Uses a list of training phases to fit the model."""
         try:
             self.cb.training_started(phases=phases)
             for epoch in range(1, epochs + 1):
@@ -77,6 +90,7 @@ class Loop:
             self.cb.cleanup()
 
     def train_one_epoch(self, phases: list, curr_epoch: int=1):
+        """Performs a single training iteration."""
         cb, model, opt = self.cb, self.model, self.opt
 
         cb.epoch_started(epoch=curr_epoch)
@@ -113,6 +127,13 @@ class Loop:
 
 
 class TrainingInterrupted(Exception):
+    """Exception which is raised in case if training loop is interrupted.
+
+    Note that this exception is intended to 'gracefully' stop a loop and can be raised from a
+    callback if it 'decides' that the training should be stopped (e.g. early stopping). All
+    other types of exceptions are treated as errors and can't guarantee that the loop is in a
+    consistent state.
+    """
     def __init__(self, context=None):
         self.context = context
     def __str__(self):

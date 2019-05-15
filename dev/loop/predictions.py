@@ -76,6 +76,5 @@ class ImageClassifier(Predictor):
             ax.set_aspect('equal')
             img, label = [from_torch(t) for t in (ds.data[idx[i]], labels[i])]
             ax.imshow(img)
-            ax.set_title(f'model={classes[i]}')
-            ax.set_xlabel(f'gt={label}')
+            ax.set_title(f'model={classes[i]} / gt={label}')
             ax.axis('off')

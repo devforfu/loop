@@ -4,10 +4,11 @@
 # file to edit: 00a_annotations.ipynb
 
 from torch.nn import Module
-from typing import Callable, List, Optional, Union, Tuple
+from typing import Callable, List, Optional, Union, Tuple, Any, Dict
+
 
 Activation = Callable
+Loss = Callable
 MaybeActivation = Optional[Activation]
-ListOfModules = List[Module]
 Func = Union[Callable, str]
 Size = Tuple[int, int]

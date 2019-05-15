@@ -9,41 +9,43 @@ from multiprocessing import cpu_count
 import torch
 from torch.nn import functional as F
 
+from loop.annotations import Loss
+
 
 class Config:
 
     @property
-    def batch_size(self): return 4
+    def batch_size(self) -> int: return 4
 
     @property
-    def bs(self): return self.batch_size
+    def bs(self) -> int: return self.batch_size
 
     @property
-    def cpu(self): return torch.device('cpu')
+    def cpu(self) -> torch.device: return torch.device('cpu')
 
     @property
-    def gpu_index(self): return 0
+    def gpu_index(self) -> int: return 0
 
     @property
-    def gpu(self): return torch.device(f'cuda:{self.gpu_index}')
+    def gpu(self) -> torch.device: return torch.device(f'cuda:{self.gpu_index}')
 
     @property
-    def device(self): return self.gpu
+    def device(self) -> torch.device: return self.gpu
 
     @property
-    def datasets(self): return Path.home()/'data'
+    def datasets(self) -> Path: return Path.home()/'data'
 
     @property
-    def loss_function(self): return F.nll_loss
+    def loss_function(self) -> Loss: return F.nll_loss
 
     @property
-    def loss_fn(self): return self.loss_function
+    def loss_fn(self) -> Loss: return self.loss_function
 
     @property
-    def num_workers(self): return cpu_count()
+    def num_workers(self) -> int: return cpu_count()
 
     @property
-    def n_jobs(self): return self.num_workers
+    def n_jobs(self) -> int: return self.num_workers
 
 
 defaults = Config()

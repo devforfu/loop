@@ -9,17 +9,19 @@ import re
 
 import numpy as np
 
+from loop.annotations import Any, List, Dict, Tuple
+
 
 __all__ = ['default', 'merge_dicts', 'to_snake_case', 'pairs', 'classname',
            'to_list', 'autoformat', 'is_scalar', 'broadcast', 'unwrap_if_single',
            'from_torch']
 
 
-def default(x, fallback=None):
+def default(x: Any, fallback: Any=None) -> Any:
     return x if x is not None else fallback
 
 
-def merge_dicts(ds):
+def merge_dicts(ds: List[Dict]) -> OrderedDict:
     """Merges a list of dictionaries into single dictionary.
 
     The order of dicts in the list affects the values of keys in the
@@ -32,21 +34,22 @@ def merge_dicts(ds):
     return merged
 
 
-def to_snake_case(string):
+def to_snake_case(string: str) -> str:
     s = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s).lower()
 
 
-def pairs(seq):
+def pairs(seq: List) -> List[Tuple]:
     """Returns list of adjacent pairs: [1, 2, 3] -> [(1, 2), (2, 3)]."""
+    assert len(seq) > 1
     yield from zip(seq[:-1], seq[1:])
 
 
-def classname(x):
+def classname(x: Any) -> str:
     return x.__class__.__name__
 
 
-def to_list(obj):
+def to_list(obj: Any) -> List:
     """Converts iterable into list or wraps a scalar value with list."""
     if isinstance(obj, str):
         return [obj]

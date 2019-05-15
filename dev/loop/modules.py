@@ -7,7 +7,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn.modules import activation as torch_act
 
-from loop.annotations import MaybeActivation, ListOfModules
+from loop.annotations import MaybeActivation, List, Func
 from loop.utils import pairs
 
 
@@ -133,7 +133,7 @@ class SeparableConv(nn.Module):
 
 
 def fc(ni: int, no: int, bias: bool=True, bn: bool=True, activ: str='linear',
-       dropout: float=None) -> ListOfModules:
+       dropout: float=None) -> List[nn.Module]:
     """Convenience function that creates a linear layer instance with the 'batteries included'.
 
     The list of created layers:
@@ -157,7 +157,7 @@ def fc(ni: int, no: int, bias: bool=True, bn: bool=True, activ: str='linear',
 
 def conv2d(ni: int, no: int, kernel: int, stride: int, groups: int=1,
            lrn: bool=False, bn: bool=False, pad: int=0, pool: tuple=None,
-           activ: str='prelu') -> ListOfModules:
+           activ: Func='prelu') -> List[nn.Module]:
     """Convenience function that creates a 2D conv layer with the 'batteries included'.
 
     The list of created layers:
@@ -180,8 +180,8 @@ def conv2d(ni: int, no: int, kernel: int, stride: int, groups: int=1,
 
 
 def sepconv(ni: int, no: int, kernel: int, stride: int,
-            pad: int, drop: float=None, activ: str='relu',
-            conv: nn.Module=nn.Conv1d) -> ListOfModules:
+            pad: int, drop: float=None, activ: Func='relu',
+            conv: nn.Module=nn.Conv1d) -> List[nn.Module]:
     """Convenience function that creates conv layer with the 'batteries included'."""
 
     assert drop is None or (0.0 < drop < 1.0)
@@ -192,12 +192,12 @@ def sepconv(ni: int, no: int, kernel: int, stride: int,
     return layers
 
 
-def bottleneck() -> ListOfModules:
+def bottleneck() -> List[nn.Module]:
     """A 'bridge' from convolutional blocks to fully-connected layers."""
     return [AdaptiveConcatPool2d(1), Flatten()]
 
 
-def fc_network(input_size: int, layers: list, activ: str='relu') -> nn.Sequential:
+def fc_network(input_size: int, layers: list, activ: Func='relu') -> nn.Sequential:
     """Creates simple fully-connected network.
 
     The `layers` list defines sizes of hidden layers and the output layers. Between
@@ -211,3 +211,19 @@ def fc_network(input_size: int, layers: list, activ: str='relu') -> nn.Sequentia
         in_sz = out_sz
     model.append(nn.Linear(in_sz, layers[-1]))
     return nn.Sequential(*model)
+
+
+def conv_network(conv: list, bn: bool=True, kernel: int=3, activ: Func='relu') -> nn.Sequential:
+    """Creates simple 2d-convolutional network with adaptive pooling.
+
+    The `conv` list defines sized of hidden layers and the fully-connected output layer.
+    """
+    layers = []
+    for ni, no in pairs(conv[:-1]):
+        layers += [nn.Conv2d(ni, no, kernel, bias=not bn), act(activ)]
+        if bn:
+            layers.append(nn.BatchNorm2d(no))
+    ni, no = conv[-2:]
+    layers += bottleneck()
+    layers.append(nn.Linear(ni, no))
+    return nn.Sequential(*layers)
