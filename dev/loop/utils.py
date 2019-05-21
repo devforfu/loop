@@ -109,3 +109,24 @@ def calculate_layout(num_axes, n_rows=None, n_cols=None):
     else:
         n_cols = max(1, math.ceil(num_axes / n_rows))
     return n_rows, n_cols
+
+
+def to_pickle(obj, path):
+    with Path(path).open('wb') as f:
+        pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def read_pickle(path):
+    with Path(path).open('rb') as f:
+        return pickle.load(f)
+
+
+def combine(x, fn, *funcs):
+    """Chains function calls on x argument like.
+
+    If funcs contains list [f, g, h] then the final output is equal to h(g(f(x))).
+    """
+    funcs = [fn] + list(funcs)
+    for func in funcs:
+        x = func(x)
+    return x

@@ -10,5 +10,6 @@ from typing import Callable, List, Optional, Union, Tuple, Any, Dict
 Activation = Callable
 Loss = Callable
 MaybeActivation = Optional[Activation]
+MaybeList = Optional[List]
 Func = Union[Callable, str]
 Size = Tuple[int, int]

@@ -5,6 +5,7 @@
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import psutil
 
@@ -65,15 +66,14 @@ class MemoryUsage(Callback):
 
     def open(self):
         self.close()
-        return Path(self.stream)
+        return Path(self.filename).open('w')
 
     def write(self, msg):
-        breakpoint()
         self._stream.write(msg + '\n')
         self._stream.flush()
 
     def close(self):
-        if self._stream is not None:
-            self._stream.close()
+        if hasattr(self, '_stream') and self._stream is not None:
             self._stream.flush()
+            self._stream.close()
             self._stream = None
