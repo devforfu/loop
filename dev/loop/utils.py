@@ -130,3 +130,11 @@ def combine(x, fn, *funcs):
     for func in funcs:
         x = func(x)
     return x
+
+
+def chunks(arr, sz=10):
+    """Splits list into list of lists with specific size or maybe less (for the last chunk)."""
+    n = len(arr)
+    n_chunks = n // sz
+    for i in range(n_chunks):
+        yield arr[i*sz:(i + 1)*sz]

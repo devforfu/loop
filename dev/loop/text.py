@@ -9,14 +9,19 @@ Text processing utils. Mostly copied from the fastai library.
 The utilities help to convert "raw" texts into formats more suitable for
 NLP models. The texts are cleaned and converted into list of tokens.
 """
+from itertools import chain
 import html
+from multiprocessing import cpu_count
+from pathlib import Path
 import re
 
+from joblib import Parallel, delayed
+import pandas as pd
 import spacy
 from spacy.lang.en import English
 
 from loop.annotations import MaybeList, Callable
-from loop.utils import combine
+from loop.utils import combine, chunks
 
 
 SEP    = '•'
@@ -57,14 +62,17 @@ def replace_repeated_words(s: str) -> str:
     return regex.sub(_replace, s)
 
 
-def fix_wikitext_special_cases(s: str) -> str:
+def replace_br_tags(s: str) -> str: return re.sub(r'<[\s]*br[\s]*/[\s]*>', '\n', s)
+
+
+def fix_special_cases(s: str) -> str:
     regex = re.compile(r'  +')
     s = (s.
-         replace('#39;',    "'").replace('amp;',    '&').replace('#146;', "'").
-         replace('nbsp;',   ' ').replace('#36;',    '$').replace('\\n',  "\n").
-         replace('quot;',   "'").replace('<br />', "\n").replace('\\"',   '"').
-         replace(' @.@ ',   '.').replace(' @-@ ',   '-').replace(' @,@ ', ',').
-         replace('\\',   ' \\ ').replace('<unk>', T_UNK))
+         replace('#39;',  "'").replace('amp;',    '&').replace('#146;',   "'").
+         replace('nbsp;', ' ').replace('#36;',    '$').replace('\\n',    "\n").
+         replace('quot;', "'").replace('\\"',     '"').replace(' @.@ ',   '.').
+         replace(' @-@ ', '-').replace(' @,@ ',   ',').replace('\\',   ' \\ ').
+         replace('<unk>', T_UNK))
     return regex.sub(' ', html.unescape(s))
 
 
@@ -95,7 +103,8 @@ PREP_RULES = [
     trim_useless_spaces,
     replace_repeated_chars,
     replace_repeated_words,
-    fix_wikitext_special_cases,
+    replace_br_tags,
+    fix_special_cases
 ]
 
 POST_RULES = [
@@ -144,3 +153,30 @@ def format_tokens(tokens): return SEP.join(tokens)
 
 
 def print_tokens(tokens, n=500): print(format_tokens(tokens[:n]))
+
+
+def read_files(root, labels=None, ext='txt', as_pandas=False):
+    """Reads files from folders, using each one as a label name."""
+    texts = []
+    for path in Path(root).expanduser().iterdir():
+        if path.is_dir():
+            label = path.stem
+            if labels is not None and label in labels:
+                continue
+            items = [
+                {'text': fn.open().read(), 'name': fn.stem, 'label': label}
+                for fn in path.glob(f'*.{ext}')]
+            texts += items
+    return pd.DataFrame(texts) if as_pandas else texts
+
+
+def parallel_tokenizer(texts, tokenizer_fn, chunk_size=10000, n_jobs=None,
+                       backend=None, as_pandas=False):
+
+    def tokenize_chunk(chunk_of_texts):
+        return [tokenizer_fn(text) for text in chunk_of_texts]
+
+    n_jobs = n_jobs or cpu_count()
+    with Parallel(n_jobs=n_jobs, backend=backend) as parallel:
+        results = parallel(delayed(tokenize_chunk)(ch) for ch in chunks(texts))
+    return list(chain(*results))
