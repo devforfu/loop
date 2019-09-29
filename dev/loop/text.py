@@ -9,6 +9,7 @@ Text processing utils. Mostly copied from the fastai library.
 The utilities help to convert "raw" texts into formats more suitable for
 NLP models. The texts are cleaned and converted into list of tokens.
 """
+from collections import Counter, OrderedDict
 from itertools import chain
 import html
 from multiprocessing import cpu_count
@@ -25,16 +26,15 @@ from loop.utils import combine, chunks
 
 
 SEP    = '•'
-T_UP   = 'xxup'
-T_REP  = 'xxrep'
-T_WREP = 'xxwrep'
-T_MAJ  = 'xxmaj'
-T_BOS  = 'xxbos'
-T_EOS  = 'xxeos'
-T_FLD  = 'xxfld'
 T_UNK  = 'xxunk'
 T_PAD  = 'xxpad'
-TOKENS = [T_UP, T_REP, T_WREP, T_MAJ, T_BOS, T_EOS, T_FLD, T_UNK, T_PAD]
+T_BOS  = 'xxbos'
+T_EOS  = 'xxeos'
+T_REP  = 'xxrep'
+T_WREP = 'xxwrep'
+T_UP   = 'xxup'
+T_MAJ  = 'xxmaj'
+TOKENS = [T_UNK, T_PAD, T_BOS, T_EOS, T_REP, T_WREP, T_UP, T_MAJ]
 
 
 def replace_tabs_with_spaces(s: str) -> str: return s.replace('\t', ' ')
@@ -76,6 +76,9 @@ def fix_special_cases(s: str) -> str:
     return regex.sub(' ', html.unescape(s))
 
 
+def replace_new_lines(s: str) -> str: return s.replace('\n', ' ')
+
+
 def replace_capslock(tokens: list) -> list:
     new = []
     for token in tokens:
@@ -99,12 +102,12 @@ def replace_capitalized(tokens: list) -> list:
 
 PREP_RULES = [
     replace_tabs_with_spaces,
-    add_spaces_around,
-    trim_useless_spaces,
+    replace_br_tags,
+    fix_special_cases,
     replace_repeated_chars,
     replace_repeated_words,
-    replace_br_tags,
-    fix_special_cases
+    replace_new_lines,
+    trim_useless_spaces
 ]
 
 POST_RULES = [
@@ -113,46 +116,62 @@ POST_RULES = [
 ]
 
 
-def tokenize(text: str, prep: MaybeList=None, post: MaybeList=None,
-             special: MaybeList=None, model_fn: Callable=English) -> list:
-    """Convert text into list of tokens."""
+def clean_text(s: str, rules=None):
+    rules = rules or PREP_RULES
+    return combine(s, *rules)
+
+
+def update_tokens(tokens: str, rules=None):
+    rules = rules or POST_RULES
+    return combine(tokens, *rules)
+
+
+def tokenize_english(texts: list):
+    return tokenize(texts, chunk_size=100_000, num_workers=cpu_count(), special=TOKENS)
+
+
+def tokenize(texts: list, chunk_size: int, num_workers: int=1,
+             model_fn=English, prep=clean_text, post=update_tokens,
+             special=None, backend='loky'):
+
+    def doc_to_list(doc: str):
+        return [token.text for token in doc]
+
+    def worker(nlp, texts):
+        return [post(doc_to_list(nlp.make_doc(prep(text)))) for text in texts]
+
+    if len(texts) <= 2*chunk_size:
+        nlp = init_tokenizer(model_fn, special)
+        return worker(nlp, texts)
+
+    with Parallel(n_jobs=num_workers, backend=backend) as parallel:
+        results = parallel(
+            delayed(worker)(nlp, text_chunk)
+            for nlp, text_chunk in (
+                (init_tokenizer(model_fn, special), t)
+                for t in chunks(texts, chunk_size)
+            )
+        )
+
+    return list(chain(*results))
+
+
+def init_tokenizer(model_fn, special=None):
     nlp = model_fn()
     if special is not None:
         for t in special:
             nlp.tokenizer.add_special_case(t, [{spacy.symbols.ORTH: t}])
-    text = combine(text, *prep)
-    tokens = [token.text for token in nlp.make_doc(text)]
-    tokens = combine(tokens, *post)
-    return tokens
-
-
-def tokenize_english(text):
-    return tokenize(text, prep=PREP_RULES, post=POST_RULES, special=TOKENS)
+    return nlp
 
 
 def useless_token(token, remove=('=', ' ')):
     return token in remove
 
 
-def create_samples(tokens, eos=T_EOS, ignore=useless_token):
-    """Splits list of tokens into samples using EOS tokens as delimiters."""
-    samples, run = [], []
-    for token in tokens:
-        if ignore(token):
-            continue
-        run.append(token)
-        if token == eos:
-            samples.append(run)
-            run = []
-    if run:
-        samples.append(run)
-    return samples
-
-
 def format_tokens(tokens): return SEP.join(tokens)
 
 
-def print_tokens(tokens, n=500): print(format_tokens(tokens[:n]))
+def print_tokens(tokens): print(format_tokens(tokens))
 
 
 def read_files(root, labels=None, ext='txt', as_pandas=False):
@@ -168,15 +187,3 @@ def read_files(root, labels=None, ext='txt', as_pandas=False):
                 for fn in path.glob(f'*.{ext}')]
             texts += items
     return pd.DataFrame(texts) if as_pandas else texts
-
-
-def parallel_tokenizer(texts, tokenizer_fn, chunk_size=10000, n_jobs=None,
-                       backend=None, as_pandas=False):
-
-    def tokenize_chunk(chunk_of_texts):
-        return [tokenizer_fn(text) for text in chunk_of_texts]
-
-    n_jobs = n_jobs or cpu_count()
-    with Parallel(n_jobs=n_jobs, backend=backend) as parallel:
-        results = parallel(delayed(tokenize_chunk)(ch) for ch in chunks(texts))
-    return list(chain(*results))

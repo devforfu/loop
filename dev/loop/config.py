@@ -18,9 +18,6 @@ class Config:
     def batch_size(self) -> int: return 4
 
     @property
-    def bs(self) -> int: return self.batch_size
-
-    @property
     def cpu(self) -> torch.device: return torch.device('cpu')
 
     @property
@@ -36,16 +33,18 @@ class Config:
     def datasets(self) -> Path: return Path.home()/'data'
 
     @property
-    def loss_function(self) -> Loss: return F.nll_loss
-
-    @property
-    def loss_fn(self) -> Loss: return self.loss_function
+    def loss_fn(self) -> Loss: return F.nll_loss
 
     @property
     def num_workers(self) -> int: return cpu_count()
 
-    @property
-    def n_jobs(self) -> int: return self.num_workers
+    def __str__(self):
+        public = []
+        for prop in dir(self):
+            if prop.startswith('_'):
+                continue
+            public.append((prop, getattr(self, prop)))
+        return '\n'.join([f'{key}: {value}' for key, value in public])
 
 
 defaults = Config()

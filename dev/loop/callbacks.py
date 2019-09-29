@@ -4,6 +4,7 @@
 # file to edit: 01a_callbacks.ipynb
 
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import IntFlag
 from operator import itemgetter
 import sys
@@ -54,6 +55,7 @@ class Callback(ParametersMixin):
     def batch_ended(self, **kwargs): pass
     def before_forward(self, **kwargs): pass
     def after_forward(self, **kwargs): pass
+    def after_loss(self, **kwargs): pass
     def before_backward(self, **kwargs): pass
     def after_backward(self, **kwargs): pass
     def interrupted(self, **kwargs): pass
@@ -170,9 +172,9 @@ class Group(Callback):
     Each observer has a backward reference to its group via 'group' attribute. The group
     keeps a reference to the model which can be used by the
     """
-    def __init__(self, cbs, model=None):
+    def __init__(self, cbs, loop=None):
         self._init(cbs)
-        self.model = model
+        self.loop = loop
 
     def __repr__(self):
         names = '\n'.join([f'  {repr(cb)}' for cb in self.callbacks])
@@ -203,6 +205,7 @@ class Group(Callback):
     def batch_ended(self, **kwargs): self('batch_ended', **kwargs)
     def before_forward(self, **kwargs): self('before_forward', **kwargs)
     def after_forward(self, **kwargs): self('after_forward', **kwargs)
+    def after_loss(self, **kwargs): self('after_loss', **kwargs)
     def before_backward(self, **kwargs): self('before_forward', **kwargs)
     def after_backward(self, **kwargs): self('after_backward', **kwargs)
     def interrupted(self, **kwargs): self('interrupted', **kwargs)
@@ -211,8 +214,8 @@ class Group(Callback):
     def __getattr__(self, item):
         if item in vars(self):
             return self.__dict__[item]
-        if self._model is not None:
-            return getattr(self._model, item)
+        if self.loop is not None:
+            return getattr(self.loop, item)
         raise AttributeError(item)
 
     def __getitem__(self, item):

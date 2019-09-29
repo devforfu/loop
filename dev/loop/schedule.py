@@ -139,3 +139,26 @@ def _make_sched_params(params):
         else:
             raise TypeError(f'unexpected param type: {item}')
     return converted
+
+
+class ScheduleCallback(Callback):
+    """Wraps PyTorch scheduler with callback logic."""
+
+    order = Order.Schedule()
+
+    def __init__(self, schedule, history_metrics=('lr',)):
+        self.schedule = schedule
+        self.history_metrics = history_metrics
+        self.history = []
+
+    def after_backward(self, phase, batch_no):
+        if not phase.grad:
+            return
+        iteration = phase.batch_index
+        self.schedule.step(epoch=iteration)
+        params = dict(iteration=iteration)
+        for i, group in enumerate(self.group.opt.param_groups):
+            params.update({
+                f'{k}_{i}': v for k, v in group.items()
+                if k in self.history_metrics})
+        self.history.append(params)

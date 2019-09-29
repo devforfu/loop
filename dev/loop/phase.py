@@ -40,6 +40,12 @@ class NamedList:
             return self.od[self.names[item]]
         return TypeError(f'invalid index type: {type(item)}')
 
+    def __str__(self):
+        return str(self.od)
+
+    def __repr__(self):
+        return str(self)
+
 
 class Phase:
     """Model training loop phase.
@@ -58,6 +64,9 @@ class Phase:
         self.rolling_loss = 0
         self.losses = []
         self.metrics = OrderedDict()
+
+    def __len__(self):
+        return len(self.loader)
 
     @property
     def last_loss(self):
@@ -91,7 +100,7 @@ class Phase:
 
     @staticmethod
     def make_train_valid(trn_ds: Dataset, val_ds: Dataset,
-                         bs: int=defaults.bs,
+                         bs: int=defaults.batch_size,
                          num_workers: Union[Tuple, int]=0):
         """Creates two loop's phases, train and valid.
 

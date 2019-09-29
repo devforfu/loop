@@ -50,14 +50,17 @@ class Loop:
     methods to make the training process launching a bit more convenient.
     """
     def __init__(self, model: nn.Module, cbs: list=None,
-                 default_cb: bool=True, opt_fn: 'callable'=default_optimizer,
-                 opt_params: dict=None, device: 'device'=defaults.device,
+                 default_cb: bool=True, opt: 'optimizer'=None,
+                 opt_fn: 'callable'=default_optimizer, opt_params: dict=None,
+                 device: 'device'=defaults.device,
                  loss_fn: 'callable'=defaults.loss_fn):
 
         model.to(device)
-        opt = opt_fn(model, **(opt_params or {}))
+        if opt is None:
+            opt = opt_fn(model, **(opt_params or {}))
+
         cb = create_callbacks(cbs, default_cb)
-        cb.model = model
+        cb.loop = self
 
         self.model = model
         self.opt = opt
@@ -65,10 +68,11 @@ class Loop:
         self.loss_fn = loss_fn
         self.device = device
 
-    def fit_datasets(self, trn_ds, val_ds, epochs: int=1, batch_size: int=defaults.bs):
+    def fit_datasets(self, trn_ds, val_ds, epochs: int=1, batch_size: int=defaults.batch_size):
         """Uses two torch datasets (training and validation) to fit the model."""
         phases = Phase.make_train_valid(
-            trn_ds, val_ds, bs=batch_size, num_workers=defaults.n_jobs)
+            trn_ds, val_ds, bs=batch_size,
+            num_workers=defaults.num_workers)
         self.train(phases, epochs)
 
     def train(self, phases: list, epochs: int=1):
@@ -101,22 +105,24 @@ class Loop:
             is_training = phase.grad
             model.train(is_training)
 
-            for batch in phase.loader:
+            for batch_no, batch in enumerate(phase.loader):
                 phase.batch_index += 1
                 cb.batch_started(phase=phase, total_batches=n)
                 x, y = place_and_unwrap(batch, self.device)
 
                 with torch.set_grad_enabled(is_training):
-                    cb.before_forward()
+                    cb.before_forward(x=x, y=y)
                     out = model(x)
-                    cb.after_forward()
+                    cb.after_forward(out=out)
                     loss = self.loss_fn(out, y)
+                    cb.after_loss(loss=loss, out=out)
 
                 if is_training:
-                    opt.zero_grad()
-                    cb.before_backward()
+                    opt.zero_grad() # move into callback and call `before_backward`
+                    cb.before_backward(phase=phase, batch_no=batch_no)
                     loss.backward()
-                    opt.step()
+                    opt.step()  # move into callback and call `after_backward`
+                    cb.after_backward(phase=phase, batch_no=batch_no)
 
                 phase.batch_loss = loss.item()
                 cb.batch_ended(phase=phase, output=out, target=y)
