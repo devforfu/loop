@@ -227,3 +227,26 @@ def conv_network(conv: list, bn: bool=True, kernel: int=3, activ: Func='relu') -
     layers += bottleneck()
     layers.append(nn.Linear(ni, no))
     return nn.Sequential(*layers)
+
+
+def freeze_all(model: nn.Module):
+    """Makes all model weights un-trainable."""
+    for name, child in model.named_children():
+        for param in child.parameters():
+            param.requires_grad = False
+
+
+def unfreeze_all(model):
+    """Makes all model weights trainable."""
+    for name, child in model.named_children():
+        for param in child.parameters():
+            param.requires_grad = True
+
+
+def unfreeze_layers(model, names):
+    """Makes trainable only specific model """
+    for name, child in model.named_children():
+        if name not in names:
+            continue
+        for param in child.parameters():
+            param.requires_grad = True

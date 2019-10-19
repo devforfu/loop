@@ -4,11 +4,12 @@
 # file to edit: 02c_training.ipynb
 
 import sys
+from collections import OrderedDict
 
 import torch
 from torch import nn
 from torch import optim
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Dataset, TensorDataset
 
 from loop import callbacks as C
 from loop.config import defaults
@@ -68,11 +69,19 @@ class Loop:
         self.loss_fn = loss_fn
         self.device = device
 
-    def fit_datasets(self, trn_ds, val_ds, epochs: int=1, batch_size: int=defaults.batch_size):
+    def fit_datasets(self, trn_ds: Dataset, val_ds: Dataset,
+                     epochs: int=1, batch_size: int=defaults.batch_size):
         """Uses two torch datasets (training and validation) to fit the model."""
         phases = Phase.make_train_valid(
             trn_ds, val_ds, bs=batch_size,
             num_workers=defaults.num_workers)
+        self.train(phases, epochs)
+
+    def fit_loaders(self, loaders: OrderedDict, epochs: int=1):
+        """Uses dictionary of loaders to create training phases to fit the model."""
+        phases = [
+            Phase(name=name, loader=loader, grad=(name == 'train'))
+            for name, loader in loaders.items()]
         self.train(phases, epochs)
 
     def train(self, phases: list, epochs: int=1):
@@ -115,7 +124,7 @@ class Loop:
                     out = model(x)
                     cb.after_forward(out=out)
                     loss = self.loss_fn(out, y)
-                    cb.after_loss(loss=loss, out=out)
+                    cb.after_loss(loss=loss, out=out, target=y)
 
                 if is_training:
                     opt.zero_grad() # move into callback and call `before_backward`
