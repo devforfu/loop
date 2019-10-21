@@ -3,6 +3,7 @@
 # -----------------------------------------
 # file to edit: 01b_modules.ipynb
 
+import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.nn.modules import activation as torch_act

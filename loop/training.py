@@ -53,8 +53,8 @@ class Loop:
     def __init__(self, model: nn.Module, cbs: list=None,
                  default_cb: bool=True, opt: 'optimizer'=None,
                  opt_fn: 'callable'=default_optimizer, opt_params: dict=None,
-                 device: 'device'=defaults.device,
-                 loss_fn: 'callable'=defaults.loss_fn):
+                 device: 'device'=defaults.device, features_key: str='features',
+                 targets_key: str='targets', loss_fn: 'callable'=defaults.loss_fn):
 
         model.to(device)
         if opt is None:
@@ -68,6 +68,8 @@ class Loop:
         self.cb = cb
         self.loss_fn = loss_fn
         self.device = device
+        self.features_key = features_key
+        self.targets_key = targets_key
 
     def fit_datasets(self, trn_ds: Dataset, val_ds: Dataset,
                      epochs: int=1, batch_size: int=defaults.batch_size):
@@ -117,7 +119,7 @@ class Loop:
             for batch_no, batch in enumerate(phase.loader):
                 phase.batch_index += 1
                 cb.batch_started(phase=phase, total_batches=n)
-                x, y = place_and_unwrap(batch, self.device)
+                x, y = to_xy(batch, self.device)
 
                 with torch.set_grad_enabled(is_training):
                     cb.before_forward(x=x, y=y)
@@ -157,6 +159,23 @@ class TrainingInterrupted(Exception):
 
 def raise_interruption(context):
     raise TrainingInterrupted(context=context)
+
+
+def to_xy(batch, device, features_key='features', targets_key='targets'):
+    """Converts batch object into (x, y) tuple of samples and targets.
+
+    A batch could be one of the following:
+        * tuple with two arrays X and y of the same size
+        * dictionary with keys `features_key` and `targets_key`
+
+    """
+    if isinstance(batch, tuple):
+        return place_and_unwrap(batch, device)
+    elif isinstance(batch, (dict, OrderedDict)):
+        x = batch[features_key]
+        y = batch[targets_key]
+        return place_and_unwrap((x, y), device)
+    raise NotImplementedError(f'unknown batch type: {type(batch)}')
 
 
 def place_and_unwrap(batch, device):
