@@ -3,6 +3,7 @@
 # -----------------------------------------
 # file to edit: 01b_modules.ipynb
 
+import torch
 from torch import nn
 from torch.nn import functional as F
 from torch.nn.modules import activation as torch_act
@@ -227,3 +228,48 @@ def conv_network(conv: list, bn: bool=True, kernel: int=3, activ: Func='relu') -
     layers += bottleneck()
     layers.append(nn.Linear(ni, no))
     return nn.Sequential(*layers)
+
+
+def freeze_all(model: nn.Module):
+    """Makes all model weights un-trainable."""
+    for name, child in model.named_children():
+        for param in child.parameters():
+            param.requires_grad = False
+
+
+def unfreeze_all(model):
+    """Makes all model weights trainable."""
+    for name, child in model.named_children():
+        for param in child.parameters():
+            param.requires_grad = True
+
+
+def unfreeze_layers(model, names):
+    """Makes trainable only specific model """
+    for name, child in model.named_children():
+        if name not in names:
+            continue
+        for param in child.parameters():
+            param.requires_grad = True
+
+
+def get_layer(model, key):
+    parts = key.split('.')
+    if len(parts) == 1:
+        return getattr(model, key)
+    else:
+        try:
+            for part in parts:
+                model = getattr(model, part)
+            return model
+        except AttributeError:
+            raise KeyError(f'cannot resolve key: {key}')
+
+
+def set_trainable(model, keys, trainable=True):
+    for key in keys:
+        layer = get_layer(model, key)
+        if trainable:
+            unfreeze_all(layer)
+        else:
+            freeze_all(layer)

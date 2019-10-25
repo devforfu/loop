@@ -44,6 +44,18 @@ def report_error(exc):
     _err_stream.flush()
 
 
+_out_stream = sys.stdout
+def get_output_stream():
+    return _out_stream
+def set_output_stream(stream):
+    _out_stream = stream
+
+
+def write_output(message: str):
+    _out_stream.write(message)
+    _out_stream.flush()
+
+
 class Loop:
     """A generic training loop implementation.
 
@@ -89,7 +101,7 @@ class Loop:
     def train(self, phases: list, epochs: int=1):
         """Uses a list of training phases to fit the model."""
         try:
-            self.cb.training_started(phases=phases)
+            self.cb.training_started(phases=phases, epochs=epochs)
             for epoch in range(1, epochs + 1):
                 self.train_one_epoch(phases, epoch)
             self.cb.training_ended(phases=phases)
@@ -107,6 +119,8 @@ class Loop:
     def train_one_epoch(self, phases: list, curr_epoch: int=1):
         """Performs a single training iteration."""
         cb, model, opt = self.cb, self.model, self.opt
+
+        phases = Phase.as_named_list(phases)
 
         cb.epoch_started(epoch=curr_epoch)
 
@@ -169,7 +183,7 @@ def to_xy(batch, device, features_key='features', targets_key='targets'):
         * dictionary with keys `features_key` and `targets_key`
 
     """
-    if isinstance(batch, tuple):
+    if isinstance(batch, (tuple, list)):
         return place_and_unwrap(batch, device)
     elif isinstance(batch, (dict, OrderedDict)):
         x = batch[features_key]

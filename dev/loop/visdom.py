@@ -45,7 +45,7 @@ class VisdomDashboard(Callback):
                 X=[x], Y=[phase.batch_loss], win=phase.name, name='batch_loss',
                 opts=dict(title=f'Running Batch Loss [{phase.name}]'), update='append')
 
-    def epoch_ended(self, phases, epoch):
+    def epoch_ended(self, phases, epoch, **kwargs):
         metrics = dict(ChainMap(*[phase.last_metrics for phase in phases]))
         for name, value in metrics.items():
             phase, metric_name = name.split('_')

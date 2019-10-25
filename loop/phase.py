@@ -113,3 +113,14 @@ class Phase:
         phs['train'] = Phase('train', DataLoader(trn_ds, bs, shuffle=True, num_workers=trn))
         phs['valid'] = Phase('valid', DataLoader(val_ds, bs, num_workers=val), grad=False)
         return NamedList(phs)
+
+    @staticmethod
+    def as_named_list(phases: list):
+        """Converts list of phases into NamedList."""
+        return NamedList(OrderedDict([(phase.name, phase) for phase in phases]))
+
+    def __repr__(self):
+        return f'Phase(name={self.name}, last_loss={self.last_loss})'
+
+    def __str__(self):
+        return repr(self)

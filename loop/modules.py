@@ -251,3 +251,25 @@ def unfreeze_layers(model, names):
             continue
         for param in child.parameters():
             param.requires_grad = True
+
+
+def get_layer(model, key):
+    parts = key.split('.')
+    if len(parts) == 1:
+        return getattr(model, key)
+    else:
+        try:
+            for part in parts:
+                model = getattr(model, part)
+            return model
+        except AttributeError:
+            raise KeyError(f'cannot resolve key: {key}')
+
+
+def set_trainable(model, keys, trainable=True):
+    for key in keys:
+        layer = get_layer(model, key)
+        if trainable:
+            unfreeze_all(layer)
+        else:
+            freeze_all(layer)
