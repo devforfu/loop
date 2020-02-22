@@ -133,7 +133,9 @@ class Loop:
             for batch_no, batch in enumerate(phase.loader):
                 phase.batch_index += 1
                 cb.batch_started(phase=phase, total_batches=n)
-                x, y = to_xy(batch, self.device)
+                x, y = to_xy(batch, self.device,
+                             features_key=self.features_key,
+                             targets_key=self.targets_key)
 
                 with torch.set_grad_enabled(is_training):
                     cb.before_forward(x=x, y=y)
