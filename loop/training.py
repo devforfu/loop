@@ -132,7 +132,7 @@ class Loop:
 
             for batch_no, batch in enumerate(phase.loader):
                 phase.batch_index += 1
-                cb.batch_started(phase=phase, total_batches=n)
+                cb.batch_started(phase=phase, total_batches=n, epoch=curr_epoch)
                 x, y = to_xy(batch, self.device,
                              features_key=self.features_key,
                              targets_key=self.targets_key)
@@ -152,7 +152,7 @@ class Loop:
                     cb.after_backward(phase=phase, batch_no=batch_no)
 
                 phase.batch_loss = loss.item()
-                cb.batch_ended(phase=phase, output=out, target=y)
+                cb.batch_ended(phase=phase, output=out, target=y, epoch=curr_epoch)
 
             cb.phase_ended(phase=phase)
 
