@@ -35,6 +35,12 @@ class Config:
     def __setitem__(self, key: Union[Key, str], value: Any):
         self.options[self._wrap(key)] = value
 
+    def __str__(self):
+        options = []
+        for key, value in self.options.items():
+            options.append(f'{key.name}: {value}')
+        return '\n'.join(options)
+
     def _wrap(self, item: Union[Key, str]):
         try:
             return self.key_enum(item)
